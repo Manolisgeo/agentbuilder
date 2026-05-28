@@ -19,7 +19,7 @@ export function BuildStepper({ stages }: BuildStepperProps) {
 
   return (
     <div className="relative mt-8 w-full max-w-xs">
-      <div className="absolute left-[16%] right-[16%] top-4 h-px bg-white/[0.06]">
+      <div className="absolute left-[16%] right-[16%] top-4 h-px bg-black/[0.08] dark:bg-white/[0.06]">
         <div
           className="h-full bg-gradient-to-r from-primary/80 to-primary/40 transition-all duration-700 ease-out"
           style={{ width: `${trackFill}%` }}
@@ -42,7 +42,7 @@ export function BuildStepper({ stages }: BuildStepperProps) {
                     ? "border-primary/50 bg-primary/10 text-primary shadow-[0_0_12px_rgba(255,107,26,0.25)]"
                     : active
                       ? "border-system/40 bg-system/5 text-system idle-pulse"
-                      : "border-white/[0.08] bg-surface-2 text-muted-foreground"
+                      : "border-black/[0.08] bg-surface-2 text-muted-foreground dark:border-white/[0.08]"
                 )}
               >
                 {index + 1}

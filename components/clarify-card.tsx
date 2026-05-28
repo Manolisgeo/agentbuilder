@@ -272,7 +272,7 @@ function ReadOnlySummary({
   answers: AnswerMap;
 }) {
   return (
-    <div className="rounded-xl border border-white/[0.06] bg-surface-2/60 p-4">
+    <div className="inner-card p-4">
       <div className="mb-3 flex items-center gap-2">
         <Check className="size-3.5 text-green-400" />
         <span className="font-mono text-[10px] uppercase tracking-wider text-green-400">
@@ -341,7 +341,7 @@ export function ClarifyCard({ block, onSubmit, submitted = false, submittedAnswe
   if (!current) return null;
 
   return (
-    <div className="rounded-xl border border-white/[0.06] bg-surface-2/60 p-4">
+    <div className="inner-card p-4">
       <div className="mb-3 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Circle className="size-2 fill-primary text-primary" />

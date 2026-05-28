@@ -77,7 +77,7 @@ function ResearchDisplay({
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
-        className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-white/[0.02]"
+        className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"
       >
         <Search className="size-3.5 shrink-0 text-system" />
         <span className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-foreground/90">
@@ -91,7 +91,7 @@ function ResearchDisplay({
         />
       </button>
       {expanded && (
-        <div className="border-t border-white/[0.05] px-3 py-2.5">
+        <div className="border-t border-black/[0.05] px-3 py-2.5 dark:border-white/[0.05]">
           <p className="whitespace-pre-wrap text-[12.5px] leading-relaxed text-foreground/80">
             {findings}
           </p>

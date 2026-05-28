@@ -35,8 +35,8 @@ function StepIcon({ status }: { status: PlanStepStatus }) {
 
 export function PlanSteps({ plan, stepOverrides = {} }: PlanStepsProps) {
   return (
-    <div className="my-2.5 overflow-hidden rounded-lg border border-white/[0.08] bg-white/[0.02]">
-      <div className="border-b border-white/[0.06] px-3 py-2">
+    <div className="my-2.5 overflow-hidden rounded-lg border border-black/[0.07] bg-black/[0.02] dark:border-white/[0.08] dark:bg-white/[0.02]">
+      <div className="border-b border-black/[0.05] px-3 py-2 dark:border-white/[0.06]">
         <p className="font-mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground/70">
           Plan
         </p>
@@ -44,7 +44,7 @@ export function PlanSteps({ plan, stepOverrides = {} }: PlanStepsProps) {
           {plan.title}
         </p>
       </div>
-      <ol className="space-y-0 divide-y divide-white/[0.04]">
+      <ol className="space-y-0 divide-y divide-black/[0.04] dark:divide-white/[0.04]">
         {plan.steps.map((step, index) => {
           const status =
             stepOverrides[step.id] ?? step.status ?? "pending";

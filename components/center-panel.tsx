@@ -36,14 +36,14 @@ export function CenterPanel({
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
-      <div className="relative flex shrink-0 items-center gap-1 rounded-full border border-white/[0.06] bg-white/[0.02] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-md">
+      <div className="relative flex shrink-0 items-center gap-1 rounded-full border border-black/[0.06] bg-black/[0.02] p-1 shadow-[inset_0_1px_0_rgba(0,0,0,0.04)] backdrop-blur-md dark:border-white/[0.06] dark:bg-white/[0.02] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
         {/* Sliding active background */}
         <div
           className={cn(
             "absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-full transition-all duration-300 ease-out",
             view === "canvas"
-              ? "left-1 bg-gradient-to-br from-white/[0.07] to-white/[0.02] shadow-[0_2px_8px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.06)]"
-              : "left-[calc(50%+0px)] bg-gradient-to-br from-violet/15 to-violet/[0.04] shadow-[0_2px_12px_-2px_rgba(139,92,246,0.4),inset_0_1px_0_rgba(255,255,255,0.06)]"
+              ? "left-1 bg-gradient-to-br from-black/[0.05] to-black/[0.01] shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.6)] dark:from-white/[0.07] dark:to-white/[0.02] dark:shadow-[0_2px_8px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.06)]"
+              : "left-[calc(50%+0px)] bg-gradient-to-br from-violet/10 to-violet/[0.04] shadow-[0_2px_12px_-2px_rgba(139,92,246,0.25),inset_0_1px_0_rgba(255,255,255,0.5)] dark:from-violet/15 dark:shadow-[0_2px_12px_-2px_rgba(139,92,246,0.4),inset_0_1px_0_rgba(255,255,255,0.06)]"
           )}
         />
 
@@ -72,7 +72,7 @@ export function CenterPanel({
           className={cn(
             "relative z-10 flex flex-1 items-center justify-center gap-2 rounded-full px-3 py-2 text-[12px] font-medium transition-colors",
             view === "preview"
-              ? "text-violet-200"
+              ? "text-violet-600 dark:text-violet-200"
               : "text-muted-foreground hover:text-foreground",
             !canPreview && "cursor-not-allowed opacity-40"
           )}

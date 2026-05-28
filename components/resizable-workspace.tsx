@@ -106,11 +106,11 @@ function ResizeHandle({ onDrag, className }: ResizeHandleProps) {
         event.preventDefault();
       }}
     >
-      <div className="absolute inset-y-3 w-px bg-white/[0.04] transition-colors group-hover:bg-primary/40 group-active:bg-primary/60" />
+      <div className="absolute inset-y-3 w-px bg-black/[0.07] transition-colors group-hover:bg-primary/40 group-active:bg-primary/60 dark:bg-white/[0.04]" />
       <div className="relative flex h-8 w-1 flex-col items-center justify-center gap-0.5 rounded-full opacity-0 transition-opacity group-hover:opacity-100">
-        <span className="size-0.5 rounded-full bg-white/30" />
-        <span className="size-0.5 rounded-full bg-white/30" />
-        <span className="size-0.5 rounded-full bg-white/30" />
+        <span className="size-0.5 rounded-full bg-black/30 dark:bg-white/30" />
+        <span className="size-0.5 rounded-full bg-black/30 dark:bg-white/30" />
+        <span className="size-0.5 rounded-full bg-black/30 dark:bg-white/30" />
       </div>
     </div>
   );

@@ -28,7 +28,7 @@ export function WebSearchDisplay({
       <button
         type="button"
         onClick={() => setExpanded((value) => !value)}
-        className="flex w-full items-center gap-2 px-3 py-2.5 text-left hover:bg-white/[0.02]"
+        className="flex w-full items-center gap-2 px-3 py-2.5 text-left hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"
       >
         <Globe className="size-3.5 shrink-0 text-system" />
         <div className="min-w-0 flex-1">
@@ -53,7 +53,7 @@ export function WebSearchDisplay({
       </button>
 
       {expanded && (
-        <div className="space-y-3 border-t border-white/[0.05] px-3 py-3">
+        <div className="space-y-3 border-t border-black/[0.05] px-3 py-3 dark:border-white/[0.05]">
           {result.answer && (
             <p className="text-[12.5px] leading-relaxed text-foreground/85">
               {result.answer}
@@ -65,7 +65,7 @@ export function WebSearchDisplay({
               {result.sources.map((source) => (
                 <li
                   key={source.url}
-                  className="rounded-md border border-white/[0.05] bg-white/[0.02] px-2.5 py-2"
+                  className="rounded-md border border-black/[0.06] bg-black/[0.02] px-2.5 py-2 dark:border-white/[0.05] dark:bg-white/[0.02]"
                 >
                   <a
                     href={source.url}

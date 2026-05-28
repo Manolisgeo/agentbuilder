@@ -195,7 +195,7 @@ export function ChatPanel({
   return (
     <>
     <HudPanel tier={1} className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="flex items-center justify-between gap-3 border-b border-white/[0.05] px-4 py-3.5">
+      <div className="flex items-center justify-between gap-3 border-b border-black/[0.06] px-4 py-3.5 dark:border-white/[0.05]">
         <div className="flex items-center gap-2.5">
           <span
             className={`size-1.5 rounded-full ${
@@ -229,7 +229,7 @@ export function ChatPanel({
         <div className="space-y-5 py-4">
           {messages.length === 0 && (
             <div className="space-y-4">
-              <div className="relative overflow-hidden rounded-xl border border-white/[0.06] bg-gradient-to-br from-white/[0.04] to-transparent px-4 py-4">
+              <div className="inner-card relative overflow-hidden px-4 py-4">
                 <div className="absolute -right-12 -top-12 size-32 rounded-full bg-primary/10 blur-2xl" />
                 <p className="relative text-[14px] font-medium text-foreground">
                   Let&apos;s design your agent together
@@ -249,10 +249,10 @@ export function ChatPanel({
                       type="button"
                       onClick={() => submitPrompt(prompt.text)}
                       disabled={isBusy}
-                      className="group lift flex w-full items-start gap-3 rounded-xl border border-white/[0.05] bg-white/[0.015] px-3 py-2.5 text-left transition-all hover:border-white/[0.1] hover:bg-white/[0.04] disabled:opacity-40"
+                      className="group lift inner-card flex w-full items-start gap-3 px-3 py-2.5 text-left transition-all hover:brightness-[0.97] disabled:opacity-40"
                     >
                       <div
-                        className={`flex size-7 shrink-0 items-center justify-center rounded-lg border border-white/[0.06] bg-gradient-to-br ${prompt.accent} shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]`}
+                        className={`flex size-7 shrink-0 items-center justify-center rounded-lg border border-black/[0.06] bg-gradient-to-br ${prompt.accent} shadow-[inset_0_1px_0_rgba(0,0,0,0.04)] dark:border-white/[0.06] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]`}
                       >
                         <prompt.icon className="size-3.5" strokeWidth={1.8} />
                       </div>
@@ -289,7 +289,7 @@ export function ChatPanel({
       </ScrollArea>
 
       {isDiscovery && messages.length > 0 && !isBusy && (
-        <div className="border-t border-white/[0.05] px-3 py-2.5">
+        <div className="border-t border-black/[0.06] px-3 py-2.5 dark:border-white/[0.05]">
           <Button
             type="button"
             onClick={startBuilding}
@@ -301,7 +301,7 @@ export function ChatPanel({
         </div>
       )}
 
-      <div className="border-t border-white/[0.05]">
+      <div className="border-t border-black/[0.06] dark:border-white/[0.05]">
         <ChatComposer
           value={input}
           onChange={setInput}

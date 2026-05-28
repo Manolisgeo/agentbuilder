@@ -134,15 +134,15 @@ export function PreviewPanel({ agentSpec, onMemoryUpdate }: PreviewPanelProps) {
       live={hasLiveSearch}
       className="flex h-full min-h-0 flex-col overflow-hidden"
     >
-      <div className="shrink-0 border-b border-white/[0.05]">
-        <div className="flex items-center gap-2 border-b border-white/[0.04] bg-black/20 px-4 py-2">
+      <div className="shrink-0 border-b border-black/[0.05] dark:border-white/[0.05]">
+        <div className="flex items-center gap-2 border-b border-black/[0.04] bg-black/[0.04] px-4 py-2 dark:border-white/[0.04] dark:bg-black/20">
           <div className="flex gap-1.5">
             <span className="size-2.5 rounded-full bg-red-500/60" />
             <span className="size-2.5 rounded-full bg-yellow-500/60" />
             <span className="size-2.5 rounded-full bg-green-500/60" />
           </div>
           <div className="ml-2 flex flex-1 items-center justify-center">
-            <div className="flex items-center gap-1.5 rounded-md bg-white/[0.04] px-2.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+            <div className="flex items-center gap-1.5 rounded-md bg-black/[0.05] px-2.5 py-0.5 font-mono text-[10px] text-muted-foreground dark:bg-white/[0.04]">
               <span
                 className={`size-1 rounded-full ${hasLiveSearch ? "bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.8)]" : "bg-violet"}`}
               />
@@ -250,7 +250,7 @@ export function PreviewPanel({ agentSpec, onMemoryUpdate }: PreviewPanelProps) {
                       type="button"
                       onClick={() => submitPrompt(prompt)}
                       disabled={isBusy}
-                      className="lift w-full rounded-xl border border-white/[0.06] bg-white/[0.015] px-3.5 py-2.5 text-left text-[12.5px] leading-relaxed text-muted-foreground transition-all hover:border-violet/30 hover:bg-violet/[0.06] hover:text-foreground disabled:opacity-40"
+                      className="lift w-full rounded-xl border border-black/[0.07] bg-black/[0.02] px-3.5 py-2.5 text-left text-[12.5px] leading-relaxed text-muted-foreground transition-all hover:border-violet/30 hover:bg-violet/[0.06] hover:text-foreground disabled:opacity-40 dark:border-white/[0.06] dark:bg-white/[0.015]"
                     >
                       {prompt}
                     </button>
@@ -303,7 +303,7 @@ export function PreviewPanel({ agentSpec, onMemoryUpdate }: PreviewPanelProps) {
         </div>
       </ScrollArea>
 
-      <div className="border-t border-white/[0.05]">
+      <div className="border-t border-black/[0.06] dark:border-white/[0.05]">
         <ChatComposer
           value={input}
           onChange={setInput}

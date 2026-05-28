@@ -16,7 +16,7 @@ export function CanvasEmpty({ buildPhase, buildProgress }: CanvasEmptyProps) {
         <div className="relative flex size-[280px] items-center justify-center">
           <div className="absolute inset-0 rounded-full border border-system/10 idle-pulse" />
           <div className="absolute inset-[14px] rounded-full border border-system/15 reticle-spin" />
-          <div className="absolute inset-[32px] rounded-full border border-dashed border-white/[0.06] reticle-spin-reverse" />
+          <div className="absolute inset-[32px] rounded-full border border-dashed border-black/[0.08] reticle-spin-reverse dark:border-white/[0.06]" />
           <div className="absolute inset-[50px] rounded-full bg-gradient-radial from-primary/8 via-transparent to-transparent" />
 
           {/* Schematic dots */}
@@ -94,7 +94,7 @@ export function CanvasEmpty({ buildPhase, buildProgress }: CanvasEmptyProps) {
               : "Describe your agent in chat — nodes will spawn and link as the spec is built."}
           </p>
           {buildProgress !== undefined && buildProgress > 0 && (
-            <div className="mt-3 flex items-center gap-2 rounded-full border border-white/[0.06] bg-white/[0.02] px-3 py-1">
+            <div className="mt-3 flex items-center gap-2 rounded-full border border-black/[0.07] bg-black/[0.02] px-3 py-1 dark:border-white/[0.06] dark:bg-white/[0.02]">
               <span className="size-1.5 rounded-full bg-system idle-pulse" />
               <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-system">
                 {buildProgress}% configured
