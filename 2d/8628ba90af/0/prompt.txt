@@ -1,0 +1,29 @@
+/plan generate me a plan to make the agent page look less vibe coded and look more professional. especially the right side bar nees to look less developer and more corporate everyday person oriented.
+
+---
+
+/plan generate me a plan to make the agent page look less vibe coded and look more professional. especially the right side bar nees to look less developer and more corporate everyday person oriented.
+
+---
+
+implement it
+
+---
+
+restart localhost
+
+---
+
+restart localhost
+
+---
+
+we need to replace this and maybe rearange teh top a bit Build AI agents that work for you
+
+---
+
+make the build progress bar on the right continuos instead of little dots
+
+---
+
+make the build progress bar on the right continuos instead of little dots

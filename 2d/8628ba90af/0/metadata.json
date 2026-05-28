@@ -1,0 +1,122 @@
+{
+  "cli_version": "0.6.3",
+  "checkpoint_id": "2d8628ba90af",
+  "session_id": "4861b0ee-c8a1-494a-b078-c5c6fbc9d22c",
+  "strategy": "manual-commit",
+  "created_at": "2026-05-28T12:48:54.065145Z",
+  "branch": "main",
+  "checkpoints_count": 5,
+  "files_touched": [
+    "app/api/chat/route.ts",
+    "app/page.tsx",
+    "components/actions-panel.tsx",
+    "components/chat-panel.tsx",
+    "components/chat/chat-message.tsx",
+    "components/chat/tool-call-display.tsx",
+    "components/hud/segmented-progress.tsx",
+    "components/preview/articles-feed.tsx",
+    "components/preview/dashboard-card.tsx",
+    "components/preview/preview-panel.tsx",
+    "docs/plans/html-dashboard-preview.md",
+    "docs/plans/professional-ui-polish.md",
+    "lib/agent-prompt.ts",
+    "lib/build-progress.ts",
+    "lib/orchestrator-prompt.ts",
+    "lib/preview-runtime.ts",
+    "lib/preview-types.ts",
+    "package-lock.json",
+    "package.json"
+  ],
+  "agent": "Cursor",
+  "model": "claude-sonnet-4-6",
+  "turn_id": "f4cd5d1c4afa",
+  "session_metrics": {
+    "duration_ms": 798108,
+    "turn_count": 5
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-05-28T12:48:54.062214Z",
+    "agent_lines": 2038,
+    "agent_removed": 132,
+    "human_added": 0,
+    "human_modified": 48,
+    "human_removed": 35,
+    "total_committed": 2086,
+    "total_lines_changed": 2253,
+    "agent_percentage": 96.31602308033733,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 632,
+      "user_lines_removed": 24,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        "app/api/chat/route.ts": 5,
+        "components/chat/chat-message.tsx": 24,
+        "components/chat/tool-call-display.tsx": 147,
+        "components/preview/dashboard-card.tsx": 60,
+        "components/preview/preview-panel.tsx": 22,
+        "docs/plans/html-dashboard-preview.md": 282,
+        "lib/agent-prompt.ts": 33,
+        "lib/preview-runtime.ts": 52,
+        "lib/preview-types.ts": 7
+      },
+      "user_removed_per_file": {
+        "app/api/chat/route.ts": 4,
+        "components/chat/chat-message.tsx": 6,
+        "components/chat/tool-call-display.tsx": 1,
+        "components/preview/preview-panel.tsx": 3,
+        "lib/agent-prompt.ts": 1,
+        "lib/preview-runtime.ts": 9
+      }
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 48,
+      "user_lines_removed": 59,
+      "agent_lines_added": 2652,
+      "agent_lines_removed": 122,
+      "user_added_per_file": {
+        "app/page.tsx": 5,
+        "components/actions-panel.tsx": 34,
+        "components/chat-panel.tsx": 9
+      },
+      "user_removed_per_file": {
+        "app/page.tsx": 12,
+        "components/actions-panel.tsx": 33,
+        "components/chat-panel.tsx": 14
+      }
+    },
+    {
+      "checkpoint_number": 3,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    },
+    {
+      "checkpoint_number": 4,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 2699,
+      "agent_lines_removed": 180
+    },
+    {
+      "checkpoint_number": 5,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 2707,
+      "agent_lines_removed": 190
+    },
+    {
+      "checkpoint_number": 6,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 2718,
+      "agent_lines_removed": 210
+    }
+  ]
+}
