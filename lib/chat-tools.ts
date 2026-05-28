@@ -17,6 +17,7 @@ import {
 } from "@/lib/agent-spec";
 import type { BuildPhase } from "@/lib/build-phase";
 import type { SwarmUIMessage } from "@/lib/chat-types";
+import { clarifyBlockSchema, type ClarifyBlock } from "@/lib/clarify-types";
 import { formatArchitectureContext } from "@/lib/graph-context";
 import { deepseekChat } from "@/lib/deepseek";
 
@@ -57,6 +58,19 @@ function emitSpec(writer: ToolWriter, spec: AgentSpec) {
 
 function sharedTools(writer: ToolWriter, getSpec: () => AgentSpec) {
   return {
+    clarifyUser: {
+      description:
+        "Ask the user structured clarifying questions before building. Use in discovery to gather requirements about purpose, tone, tools, and constraints. Prefer this over open-ended chat questions for precise, structured input.",
+      inputSchema: clarifyBlockSchema,
+      execute: async (block: ClarifyBlock) => {
+        writer.write({
+          type: "data-clarify",
+          id: `clarify-${Date.now()}`,
+          data: block,
+        });
+        return { sent: true, questionCount: block.questions.length };
+      },
+    },
     researchTopic: {
       description:
         "Research a topic to inform agent design. Call proactively when you need domain knowledge, best practices, or context — do not ask the user for permission first.",

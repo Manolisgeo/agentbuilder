@@ -15,7 +15,6 @@ import "@xyflow/react/dist/style.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BoardNode, type BoardNodeData } from "@/components/board/board-node";
 import { BoardToolbar } from "@/components/board/board-toolbar";
-import { CanvasEmpty } from "@/components/board/canvas-empty";
 import { HudPanel } from "@/components/hud/hud-panel";
 import {
   agentSpecSchema,
@@ -34,6 +33,50 @@ interface AgentGraphProps {
 const nodeTypes = {
   boardNode: BoardNode,
 };
+
+const PLACEHOLDER_NODES: Node<BoardNodeData>[] = [
+  {
+    id: "ph-persona",
+    type: "boardNode",
+    position: { x: 80, y: 200 },
+    data: { label: "Agent", subtitle: "Name & role", kind: "agent", placeholder: true },
+    draggable: false,
+    selectable: false,
+  },
+  {
+    id: "ph-instructions",
+    type: "boardNode",
+    position: { x: 420, y: 200 },
+    data: { label: "Instructions", subtitle: "System prompt", kind: "instructions", placeholder: true },
+    draggable: false,
+    selectable: false,
+  },
+  {
+    id: "ph-tool",
+    type: "boardNode",
+    position: { x: 80, y: 400 },
+    data: { label: "Tool", subtitle: "Capability", kind: "tool", placeholder: true },
+    draggable: false,
+    selectable: false,
+  },
+];
+
+const PLACEHOLDER_EDGES: Edge[] = [
+  {
+    id: "ph-e1",
+    source: "ph-persona",
+    target: "ph-instructions",
+    style: { stroke: "rgba(255,255,255,0.07)", strokeWidth: 1.5 },
+    markerEnd: { type: MarkerType.ArrowClosed, color: "rgba(255,255,255,0.1)" },
+  },
+  {
+    id: "ph-e2",
+    source: "ph-persona",
+    target: "ph-tool",
+    style: { stroke: "rgba(255,255,255,0.07)", strokeWidth: 1.5, strokeDasharray: "6 4" },
+    markerEnd: { type: MarkerType.ArrowClosed, color: "rgba(255,255,255,0.1)" },
+  },
+];
 
 function buildGraphFromSpec(
   spec: AgentSpec,
@@ -195,7 +238,7 @@ function BoardCanvas({
 
   const { nodes, edges, newCount } = useMemo(() => {
     if (isEmpty) {
-      return { nodes: [], edges: [], newCount: 0 };
+      return { nodes: PLACEHOLDER_NODES, edges: PLACEHOLDER_EDGES, newCount: 0 };
     }
     const graph = buildGraphFromSpec(validSpec, seenNodeIdsRef.current);
     graph.nodes.forEach((node) => seenNodeIdsRef.current.add(node.id));
@@ -241,7 +284,16 @@ function BoardCanvas({
       />
 
       {isEmpty && (
-        <CanvasEmpty buildPhase={buildPhase} buildProgress={buildProgress} />
+        <div className="pointer-events-none absolute inset-x-0 top-14 z-10 flex justify-center px-6">
+          <div className="max-w-md rounded-xl border border-white/[0.06] bg-surface-1/90 px-4 py-3 text-center backdrop-blur-sm">
+            <p className="text-sm font-medium text-foreground">
+              Your agent architecture will appear here
+            </p>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              Describe your agent in chat — nodes will connect as the spec is assembled.
+            </p>
+          </div>
+        </div>
       )}
 
       {isBuilding && !isEmpty && (

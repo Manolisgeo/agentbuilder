@@ -1,5 +1,6 @@
 import type { UIMessage } from "ai";
 import type { AgentSpec } from "./agent-spec";
+import type { ClarifyBlock } from "./clarify-types";
 import type { CodeSpec } from "./codegen-types";
 
 export type PlanStepStatus = "pending" | "in_progress" | "completed";
@@ -35,10 +36,12 @@ export type SwarmUIMessage = UIMessage<
     plan: AgentPlan;
     planStep: PlanStepUpdate;
     research: ResearchResult;
+    clarify: ClarifyBlock;
   }
 >;
 
 export const TOOL_LABELS: Record<string, { active: string; done: string }> = {
+  clarifyUser: { active: "Asking clarifying questions", done: "Questions sent" },
   researchTopic: { active: "Researching", done: "Research complete" },
   createPlan: { active: "Creating plan", done: "Plan created" },
   updatePlanStep: { active: "Updating step", done: "Step updated" },

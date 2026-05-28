@@ -12,12 +12,14 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { ChatComposer } from "@/components/chat/chat-composer";
 import { ChatMessage } from "@/components/chat/chat-message";
+import { ClarifyCard } from "@/components/clarify-card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { HudError } from "@/components/hud/hud-error";
 import { HudPanel } from "@/components/hud/hud-panel";
 import type { AgentSpec } from "@/lib/agent-spec";
 import type { BuildPhase } from "@/lib/build-phase";
+import { buildAnswerMessage, type ClarifyAnswer, type ClarifyBlock } from "@/lib/clarify-types";
 import type { PlanStepStatus, SwarmUIMessage } from "@/lib/chat-types";
 
 interface ChatPanelProps {
@@ -68,6 +70,9 @@ export function ChatPanel({
   const [planStepOverrides, setPlanStepOverrides] = useState<
     Record<string, PlanStepStatus>
   >({});
+  const [clarifyBlock, setClarifyBlock] = useState<ClarifyBlock | null>(null);
+  const [clarifySubmitted, setClarifySubmitted] = useState(false);
+  const [submittedAnswers, setSubmittedAnswers] = useState<Record<string, string | string[]>>({});
   const agentSpecRef = useRef(agentSpec);
   const buildPhaseRef = useRef(buildPhase);
   const scrollAnchorRef = useRef<HTMLDivElement>(null);
@@ -96,6 +101,11 @@ export function ChatPanel({
           ...prev,
           [dataPart.data.stepId]: dataPart.data.status,
         }));
+      }
+      if (dataPart.type === "data-clarify") {
+        setClarifyBlock(dataPart.data as unknown as ClarifyBlock);
+        setClarifySubmitted(false);
+        setSubmittedAnswers({});
       }
     },
     onError: (err) => {
@@ -136,9 +146,23 @@ export function ChatPanel({
     }
   }, [messages, isBusy]);
 
+  const clarifyPending = clarifyBlock !== null && !clarifySubmitted && !isBusy;
+
+  function handleClarifySubmit(answers: ClarifyAnswer[]) {
+    if (!clarifyBlock) return;
+    const answerMap: Record<string, string | string[]> = {};
+    for (const a of answers) answerMap[a.id] = a.answer;
+    setSubmittedAnswers(answerMap);
+    setClarifySubmitted(true);
+    sendMessage({ text: buildAnswerMessage(clarifyBlock, answers) });
+  }
+
   function submitPrompt(text: string) {
     const trimmed = text.trim();
     if (!trimmed || isBusy) return;
+
+    setClarifyBlock(null);
+    setClarifySubmitted(false);
 
     if (
       buildPhaseRef.current === "discovery" &&
@@ -249,6 +273,15 @@ export function ChatPanel({
             />
           ))}
 
+          {clarifyBlock && (
+            <ClarifyCard
+              block={clarifyBlock}
+              onSubmit={handleClarifySubmit}
+              submitted={clarifySubmitted}
+              submittedAnswers={submittedAnswers}
+            />
+          )}
+
           {error && <HudError message={error.message} />}
           <div ref={scrollAnchorRef} />
         </div>
@@ -273,9 +306,11 @@ export function ChatPanel({
           onChange={setInput}
           onSubmit={() => submitPrompt(input)}
           onStop={stop}
-          isBusy={isBusy}
+          isBusy={isBusy || clarifyPending}
           placeholder={
-            isDiscovery
+            clarifyPending
+              ? "Answer the questions above to continue…"
+              : isDiscovery
               ? "Describe your agent, ask for research, or request a plan…"
               : "Refine nodes, add tools, or restructure the architecture…"
           }

@@ -35,6 +35,7 @@ const DISCOVERY_ADDENDUM = `
 ## Current mode: DISCOVERY
 
 - Have a collaborative conversation to understand purpose, audience, tone, tools, and constraints
+- Use \`clarifyUser\` to ask structured questions (choice, multi-choice, text) when you need specific inputs — prefer this over open-ended chat questions for crisp, precise requirements
 - Use \`researchTopic\` to investigate domains, use cases, or technical approaches
 - Use \`createPlan\` to outline the build before the user clicks "Start building"
 - Do NOT apply architecture edits unless the user explicitly asks to start building or says "build it"
