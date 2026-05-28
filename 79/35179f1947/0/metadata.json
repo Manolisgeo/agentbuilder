@@ -1,0 +1,66 @@
+{
+  "cli_version": "0.6.3",
+  "checkpoint_id": "7935179f1947",
+  "session_id": "d3bc684b-3058-4adc-b6df-d64e6f5e9487",
+  "strategy": "manual-commit",
+  "created_at": "2026-05-28T11:39:16.470234Z",
+  "branch": "main",
+  "checkpoints_count": 0,
+  "files_touched": [
+    "app/api/deploy/route.ts",
+    "components/actions-panel.tsx",
+    "lib/generate-app.ts"
+  ],
+  "agent": "Cursor",
+  "model": "claude-sonnet-4-6",
+  "turn_id": "60dfbf766c4a",
+  "initial_attribution": {
+    "calculated_at": "2026-05-28T11:39:16.468209Z",
+    "agent_lines": 49,
+    "agent_removed": 0,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 76,
+    "total_committed": 49,
+    "total_lines_changed": 125,
+    "agent_percentage": 39.2,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 11703,
+      "user_lines_removed": 107,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".playwright-mcp/console-2026-05-28T08-59-05-012Z.log": 15,
+        ".playwright-mcp/console-2026-05-28T08-59-19-331Z.log": 37,
+        ".playwright-mcp/console-2026-05-28T09-09-41-492Z.log": 69,
+        ".playwright-mcp/console-2026-05-28T09-22-02-235Z.log": 10273,
+        ".playwright-mcp/page-2026-05-28T08-59-05-795Z.yml": 148,
+        ".playwright-mcp/page-2026-05-28T08-59-19-650Z.yml": 148,
+        ".playwright-mcp/page-2026-05-28T09-09-42-299Z.yml": 148,
+        ".playwright-mcp/page-2026-05-28T09-09-54-960Z.yml": 193,
+        ".playwright-mcp/page-2026-05-28T09-10-27-427Z.yml": 193,
+        ".playwright-mcp/page-2026-05-28T09-22-03-245Z.yml": 154,
+        "app/api/chat/route.ts": 30,
+        "app/api/deploy/route.ts": 41,
+        "components/actions-panel.tsx": 14,
+        "components/chat-panel.tsx": 140,
+        "lib/agent-mutations.ts": 9,
+        "lib/chat-tools.ts": 14,
+        "lib/orchestrator-prompt.ts": 77
+      },
+      "user_removed_per_file": {
+        "app/api/chat/route.ts": 1,
+        "app/api/deploy/route.ts": 10,
+        "components/actions-panel.tsx": 66,
+        "components/chat-panel.tsx": 11,
+        "lib/agent-mutations.ts": 1,
+        "lib/chat-tools.ts": 2,
+        "lib/orchestrator-prompt.ts": 16
+      }
+    }
+  ]
+}
