@@ -59,6 +59,7 @@ const researchSchema = z.object({
 });
 
 type ToolWriter = UIMessageStreamWriter<SwarmUIMessage>;
+type OnClarifySuccess = () => void;
 
 function emitSpec(writer: ToolWriter, spec: AgentSpec) {
   writer.write({
@@ -104,7 +105,7 @@ async function runSafeTool<T extends Record<string, unknown>>(
   }
 }
 
-function sharedTools(writer: ToolWriter, getSpec: () => AgentSpec) {
+function sharedTools(writer: ToolWriter, getSpec: () => AgentSpec, onClarifySuccess?: OnClarifySuccess) {
   return {
     clarifyUser: {
       description:
@@ -117,6 +118,7 @@ function sharedTools(writer: ToolWriter, getSpec: () => AgentSpec) {
             id: `clarify-${Date.now()}`,
             data: block,
           });
+          onClarifySuccess?.();
           return { sent: true, questionCount: block.questions.length };
         }),
     },
@@ -213,10 +215,11 @@ Be factual and practical. If uncertain, say so.`,
 function buildingTools(
   writer: ToolWriter,
   getSpec: () => AgentSpec,
-  setSpec: (s: AgentSpec) => void
+  setSpec: (s: AgentSpec) => void,
+  onClarifySuccess?: OnClarifySuccess
 ) {
   return {
-    ...sharedTools(writer, getSpec),
+    ...sharedTools(writer, getSpec, onClarifySuccess),
     updatePersona: {
       description:
         "Update the persona node (name, role, tone). Use for targeted edits to the agent identity.",
@@ -505,10 +508,11 @@ export function createChatTools(
   writer: ToolWriter,
   phase: BuildPhase,
   getSpec: () => AgentSpec,
-  setSpec: (s: AgentSpec) => void
+  setSpec: (s: AgentSpec) => void,
+  onClarifySuccess?: OnClarifySuccess
 ) {
   if (phase === "discovery") {
-    return sharedTools(writer, getSpec);
+    return sharedTools(writer, getSpec, onClarifySuccess);
   }
-  return buildingTools(writer, getSpec, setSpec);
+  return buildingTools(writer, getSpec, setSpec, onClarifySuccess);
 }

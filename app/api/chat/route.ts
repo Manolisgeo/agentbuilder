@@ -37,6 +37,10 @@ export async function POST(req: Request) {
       ignoreIncompleteToolCalls: true,
     });
 
+    // Track whether a clarifyUser call actually succeeded so stopWhen
+    // doesn't halt on a failed/schema-rejected call.
+    let clarifySucceeded = false;
+
     const stream = createUIMessageStream<SwarmUIMessage>({
       execute: async ({ writer }) => {
         const getSpec = () => currentSpec;
@@ -48,7 +52,8 @@ export async function POST(req: Request) {
           writer,
           buildPhase,
           getSpec,
-          setSpec
+          setSpec,
+          () => { clarifySucceeded = true; }
         );
 
         const result = streamText({
@@ -57,10 +62,7 @@ export async function POST(req: Request) {
           messages: modelMessages,
           tools,
           stopWhen: ({ steps }) => {
-            const clarifyFired = steps.some((s) =>
-              s.toolCalls.some((tc) => tc.toolName === "clarifyUser")
-            );
-            return clarifyFired || steps.length >= 30;
+            return clarifySucceeded || steps.length >= 30;
           },
           onStepFinish: ({ toolCalls, toolResults }) => {
             // Surface any tool-level errors as visible text so the UI never silently hangs.
