@@ -56,6 +56,13 @@ export const swarmAgentSchema = z.object({
     .optional(),
 });
 
+export const agentVoiceSchema = z.object({
+  enabled: z.boolean().default(true),
+  voiceId: z.string().optional(),
+  ttsModel: z.string().optional(),
+  sttModel: z.string().optional(),
+});
+
 export const agentSpecSchema = z.object({
   name: z.string(),
   persona: z.object({
@@ -67,6 +74,7 @@ export const agentSpecSchema = z.object({
   agents: z.array(swarmAgentSchema).optional(),
   swarmMemory: z.array(swarmMemoryKeySchema).optional(),
   envVars: z.record(z.string(), z.string()).optional(),
+  voice: agentVoiceSchema.optional(),
   ui: agentUiSchema.optional(),
   deployment: agentDeploymentSchema.optional(),
 });
@@ -88,6 +96,7 @@ export const agentSpecPatchSchema = agentSpecSchema.partial().extend({
     .optional(),
   swarmMemory: z.array(swarmMemoryKeySchema).optional(),
   envVars: z.record(z.string(), z.string()).optional(),
+  voice: agentVoiceSchema.partial().optional(),
   ui: agentUiSchema.partial().extend({
     theme: agentUiSchema.shape.theme.partial().optional(),
   }).optional(),
@@ -96,6 +105,7 @@ export const agentSpecPatchSchema = agentSpecSchema.partial().extend({
 
 export type AgentSpec = z.infer<typeof agentSpecSchema>;
 export type AgentSpecPatch = z.infer<typeof agentSpecPatchSchema>;
+export type AgentVoice = z.infer<typeof agentVoiceSchema>;
 export type SwarmAgent = z.infer<typeof swarmAgentSchema>;
 export type SwarmMemoryKey = z.infer<typeof swarmMemoryKeySchema>;
 
@@ -112,7 +122,7 @@ export const defaultAgentSpec: AgentSpec = {
 
 export const MAX_SWARM_AGENTS = 4;
 
-const UI_TEMPLATES = ["chat", "widget", "landing"] as const;
+const UI_TEMPLATES = ["chat", "widget", "landing", "voice"] as const;
 const UI_LAYOUTS = ["sidebar", "fullscreen", "embedded"] as const;
 const UI_MODES = ["light", "dark", "auto"] as const;
 const UI_FONTS = ["sans", "serif", "mono"] as const;
@@ -299,6 +309,30 @@ export function normalizeAgentSpec(
       : fallback.envVars
         ? { envVars: fallback.envVars }
         : {}),
+    ...(typeof raw.voice === "object" && raw.voice !== null
+      ? {
+          voice: {
+            enabled:
+              typeof (raw.voice as Record<string, unknown>).enabled === "boolean"
+                ? (raw.voice as { enabled: boolean }).enabled
+                : fallback.voice?.enabled,
+            voiceId:
+              typeof (raw.voice as Record<string, unknown>).voiceId === "string"
+                ? (raw.voice as { voiceId: string }).voiceId
+                : fallback.voice?.voiceId,
+            ttsModel:
+              typeof (raw.voice as Record<string, unknown>).ttsModel === "string"
+                ? (raw.voice as { ttsModel: string }).ttsModel
+                : fallback.voice?.ttsModel,
+            sttModel:
+              typeof (raw.voice as Record<string, unknown>).sttModel === "string"
+                ? (raw.voice as { sttModel: string }).sttModel
+                : fallback.voice?.sttModel,
+          },
+        }
+      : fallback.voice
+        ? { voice: fallback.voice }
+        : {}),
     ui: coerceUi(raw.ui, fallback.ui ?? defaultAgentUi),
     deployment: coerceDeployment(raw.deployment, fallback.deployment ?? defaultAgentDeployment),
   };
@@ -351,6 +385,17 @@ export function mergeAgentSpec(
       }
     : currentDeployment;
 
+  const currentVoice = current.voice;
+  const patchVoice = patch.voice;
+  const mergedVoice = patchVoice
+    ? {
+        enabled: patchVoice.enabled ?? currentVoice?.enabled ?? true,
+        voiceId: patchVoice.voiceId ?? currentVoice?.voiceId,
+        ttsModel: patchVoice.ttsModel ?? currentVoice?.ttsModel,
+        sttModel: patchVoice.sttModel ?? currentVoice?.sttModel,
+      }
+    : currentVoice;
+
   const merged: AgentSpec = {
     name: patch.name ?? current.name,
     persona: {
@@ -366,6 +411,7 @@ export function mergeAgentSpec(
     envVars: patch.envVars
       ? { ...(current.envVars ?? {}), ...patch.envVars }
       : current.envVars,
+    ...(mergedVoice ? { voice: mergedVoice } : {}),
     ui: mergedUi,
     deployment: mergedDeployment,
   };

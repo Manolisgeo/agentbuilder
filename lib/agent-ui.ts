@@ -27,7 +27,7 @@ export const agentThemeSchema = z.object({
 });
 
 export const agentUiSchema = z.object({
-  template: z.enum(["chat", "widget", "landing"]),
+  template: z.enum(["chat", "widget", "landing", "voice"]),
   layout: z.enum(["sidebar", "fullscreen", "embedded"]),
   welcomeMessage: z.string().optional(),
   welcomeHint: z.string().optional(),

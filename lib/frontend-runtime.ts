@@ -174,7 +174,62 @@ export function injectChatRuntime(html: string): string {
 }
 
 /** Builder preview bridge — iframe chat talks to parent via postMessage (uses /api/preview). */
-export function buildPreviewBridgeScript(): string {
+export function buildPreviewBridgeScript(voiceEnabled = false): string {
+  const voiceBlock = voiceEnabled
+    ? `
+  var speakerOn = true;
+  var btnCss = "margin-left:6px;padding:0 10px;height:36px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:inherit;cursor:pointer;font:inherit;font-size:12px;";
+
+  var spk = document.createElement("button");
+  spk.type = "button";
+  spk.textContent = "Speaker on";
+  spk.style.cssText = btnCss;
+  spk.addEventListener("click", function () {
+    speakerOn = !speakerOn;
+    spk.textContent = speakerOn ? "Speaker on" : "Speaker off";
+  });
+
+  var mic = document.createElement("button");
+  mic.type = "button";
+  mic.textContent = "Mic";
+  mic.style.cssText = btnCss;
+  var recorder = null;
+  var chunks = [];
+  mic.addEventListener("click", async function () {
+    if (recorder && recorder.state === "recording") { recorder.stop(); return; }
+    try {
+      var stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      recorder = new MediaRecorder(stream);
+      chunks = [];
+      recorder.ondataavailable = function (e) { if (e.data.size) chunks.push(e.data); };
+      recorder.onstop = async function () {
+        stream.getTracks().forEach(function (t) { t.stop(); });
+        mic.textContent = "Mic";
+        mic.disabled = true;
+        try {
+          var r = await fetch("/api/stt", { method: "POST", headers: { "Content-Type": "audio/webm" }, body: new Blob(chunks, { type: "audio/webm" }) });
+          var d = await r.json();
+          if (d && d.text) { input.value = d.text; form.requestSubmit(); }
+          else { input.value = "[voice input — deploy to use live transcription]"; form.requestSubmit(); }
+        } catch (e) {
+          input.value = "[voice input simulated in preview]";
+          form.requestSubmit();
+        }
+        mic.disabled = false;
+      };
+      recorder.start();
+      mic.textContent = "Stop";
+    } catch (e) {
+      input.value = "[microphone unavailable in preview]";
+      form.requestSubmit();
+    }
+  });
+
+  form.appendChild(spk);
+  form.appendChild(mic);
+`
+    : "";
+
   return `
 (function () {
   var welcome = document.getElementById("welcome");
@@ -257,13 +312,18 @@ export function buildPreviewBridgeScript(): string {
       form.requestSubmit();
     }
   });
+  ${voiceBlock}
 })();
 `.trim();
 }
 
-export function injectPreviewBridge(html: string): string {
+export function injectPreviewBridge(
+  html: string,
+  options?: { voice?: boolean }
+): string {
   const withoutScripts = html.replace(/<script[\s\S]*?<\/script>/gi, "");
-  const script = `<script id="agent-preview-bridge">${buildPreviewBridgeScript()}</script>`;
+  const voiceEnabled = Boolean(options?.voice);
+  const script = `<script id="agent-preview-bridge">${buildPreviewBridgeScript(voiceEnabled)}</script>`;
   if (withoutScripts.includes("</body>")) {
     return withoutScripts.replace("</body>", `  ${script}\n</body>`);
   }
@@ -272,14 +332,20 @@ export function injectPreviewBridge(html: string): string {
 
 export type FrontendFrameMode = "static" | "live" | "design";
 
+export type FrontendFrameOptions = {
+  voice?: boolean;
+  agentName?: string;
+};
+
 export function prepareFrontendHtml(
   html: string,
-  mode: FrontendFrameMode
+  mode: FrontendFrameMode,
+  options?: FrontendFrameOptions
 ): string {
   if (mode === "static") {
     return html.replace(/<script[\s\S]*?<\/script>/gi, "");
   }
-  return injectPreviewBridge(html);
+  return injectPreviewBridge(html, options);
 }
 
 export const FRONTEND_PLACEHOLDER_HTML = `<!DOCTYPE html>

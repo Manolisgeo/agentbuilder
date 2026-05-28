@@ -13,6 +13,7 @@ import {
 import type { BuildPhase } from "@/lib/build-phase";
 import type { SwarmUIMessage } from "@/lib/chat-types";
 import { buildOrchestratorPrompt } from "@/lib/orchestrator-prompt";
+import { isBuildComplete } from "@/lib/build-checklist";
 import { getChatModel, normalizeLlmError } from "@/lib/deepseek";
 
 export const maxDuration = 120;
@@ -66,7 +67,9 @@ export async function POST(req: Request) {
           tools,
           maxRetries: 5,
           stopWhen: ({ steps }) => {
-            return clarifySucceeded || steps.length >= 30;
+            if (buildPhase === "discovery" && clarifySucceeded) return true;
+            if (buildPhase === "building") return steps.length >= 50;
+            return steps.length >= 30;
           },
           onStepFinish: ({ toolCalls, toolResults }) => {
             // Surface any tool-level errors as visible text so the UI never silently hangs.
@@ -97,6 +100,11 @@ export async function POST(req: Request) {
                 id: "agent-spec",
                 data: currentSpec,
               });
+              if (finishReason !== "stop" && !isBuildComplete(currentSpec)) {
+                console.warn(
+                  `[chat] Build ended (${finishReason}) but checklist incomplete`
+                );
+              }
             }
             // If the model was cut off by length or a tool error, append a recovery hint.
             if (finishReason === "length" || finishReason === "error") {

@@ -1,5 +1,6 @@
 import type { AgentSpec } from "@/lib/agent-spec";
 import { resolveAgentDeployment, resolveAgentUi } from "@/lib/agent-ui";
+import { inferVoiceFromSpec } from "@/lib/voice";
 
 export function formatArchitectureContext(spec: AgentSpec): string {
   const lines: string[] = ["## Current agent architecture", ""];
@@ -74,6 +75,9 @@ export function formatArchitectureContext(spec: AgentSpec): string {
   lines.push(`### Deployment`);
   lines.push(`- Platform: ${deployment.platform}`);
   lines.push(`- Files: ${deployment.files.length > 0 ? deployment.files.map((f) => f.path).join(", ") : "(not generated yet)"}`);
+  if (inferVoiceFromSpec(spec)) {
+    lines.push(`- Voice: ElevenLabs (template: voice) — phone call UI, not chat`);
+  }
 
   return lines.join("\n");
 }

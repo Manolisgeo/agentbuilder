@@ -9,6 +9,8 @@ import {
   type AgentSpec,
 } from "@/lib/agent-spec";
 import type { RuntimeInputs, SlotInput } from "@/lib/connectors";
+import { resolveVoiceConfig } from "@/lib/voice";
+import { resolveElevenLabsVoiceId } from "@/lib/voice-api";
 import { readTokens } from "@/lib/gmail-tokens";
 import {
   agentSlug,
@@ -140,23 +142,37 @@ export async function POST(req: Request) {
           // vars are a global fallback for advanced users.
           const envVars = spec.envVars ?? {};
 
-          // ElevenLabs voice (optional): voiceId/models come from the deploy
-          // form; the key from spec.envVars / server env / form input.
-          const voice = inputs.voice;
+          // ElevenLabs voice: enabled automatically when the agent spec requests
+          // voice (explicit flag or inferred from name/role/instructions).
+          const voice = resolveVoiceConfig(spec);
           const elKey =
             envVars.ELEVENLABS_API_KEY ||
             process.env.ELEVENLABS_API_KEY ||
-            voice?.apiKey;
-          if (voice?.enabled && voice.voiceId && elKey) {
-            agentConfig.voice = {
-              voiceId: voice.voiceId,
-              ttsModel: voice.ttsModel,
-              sttModel: voice.sttModel,
-            };
+            inputs.voice?.apiKey;
+          if (voice?.enabled && elKey) {
+            let voiceId = voice.voiceId;
+            try {
+              voiceId = await resolveElevenLabsVoiceId(voiceId);
+            } catch (e) {
+              log(
+                `WARNING: ${e instanceof Error ? e.message : "Could not resolve ElevenLabs voice."}`
+              );
+            }
+            if (voiceId) {
+              agentConfig.voice = {
+                voiceId,
+                ttsModel: voice.ttsModel,
+                sttModel: voice.sttModel,
+              };
+            } else {
+              log(
+                "WARNING: Voice enabled but no usable ElevenLabs voice ID was found."
+              );
+            }
           } else if (voice?.enabled && !elKey) {
-            log("WARNING: Voice enabled but no ElevenLabs API key provided.");
-          } else if (voice?.enabled && !voice.voiceId) {
-            log("WARNING: Voice enabled but no voice ID selected.");
+            log(
+              "WARNING: Voice agent detected but ELEVENLABS_API_KEY is not set — add it to .env.local."
+            );
           }
 
           let needsGmail = false;

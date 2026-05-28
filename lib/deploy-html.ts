@@ -4,8 +4,11 @@ import {
   FRONTEND_PLACEHOLDER_HTML,
   prepareFrontendHtml,
   type FrontendFrameMode,
+  type FrontendFrameOptions,
 } from "@/lib/frontend-runtime";
 import { injectDesignInspector } from "@/lib/design-inspector";
+import { inferVoiceFromSpec } from "@/lib/voice";
+import { injectVoicePreviewBridge } from "@/lib/voice-runtime";
 
 export const DEFAULT_CUSTOM_CSS = `/* Optional extra styles — edit freely */
 
@@ -28,8 +31,12 @@ const SCRIPT_TAG_RE = /<script[\s\S]*?<\/script>/gi;
 const previewSrcDocCache = new Map<string, string>();
 const PREVIEW_SRCDOC_CACHE_MAX = 16;
 
-function previewSrcDocCacheKey(html: string, mode: FrontendFrameMode): string {
-  return `${mode}\0${html}`;
+function previewSrcDocCacheKey(
+  html: string,
+  mode: FrontendFrameMode,
+  options?: FrontendFrameOptions
+): string {
+  return `${mode}\0${options?.voice ? "v" : ""}\0${html}`;
 }
 
 function rememberPreviewSrcDoc(key: string, value: string): string {
@@ -44,17 +51,20 @@ function rememberPreviewSrcDoc(key: string, value: string): string {
 /** Build iframe srcDoc from raw HTML — cached because design/live transforms are expensive. */
 export function getPreviewSrcDoc(
   html: string,
-  mode: FrontendFrameMode = "static"
+  mode: FrontendFrameMode = "static",
+  options?: FrontendFrameOptions
 ): string {
-  const key = previewSrcDocCacheKey(html, mode);
+  const key = previewSrcDocCacheKey(html, mode, options);
   const cached = previewSrcDocCache.get(key);
   if (cached !== undefined) return cached;
 
   let result: string;
   if (mode === "design") {
     result = injectDesignInspector(html.replace(SCRIPT_TAG_RE, ""));
+  } else if (options?.voice) {
+    result = injectVoicePreviewBridge(html, options.agentName);
   } else {
-    result = prepareFrontendHtml(html, mode === "live" ? "live" : "static");
+    result = prepareFrontendHtml(html, mode === "live" ? "live" : "static", options);
   }
 
   return rememberPreviewSrcDoc(key, result);
@@ -66,7 +76,10 @@ export function getPreviewHtml(
 ): string {
   const mode = options?.mode ?? "static";
   const html = getAgentFrontendHtml(spec) ?? FRONTEND_PLACEHOLDER_HTML;
-  return getPreviewSrcDoc(html, mode);
+  const frameOptions: FrontendFrameOptions | undefined = inferVoiceFromSpec(spec)
+    ? { voice: true, agentName: spec.name }
+    : undefined;
+  return getPreviewSrcDoc(html, mode, frameOptions);
 }
 
 export function buildDeployThemeCss(spec: AgentSpec): string {

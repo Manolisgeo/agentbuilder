@@ -1,5 +1,7 @@
 import type { AgentSpec } from "@/lib/agent-spec";
 import { FRONTEND_RUNTIME_CONTRACT } from "@/lib/frontend-codegen-prompt";
+import { inferVoiceFromSpec } from "@/lib/voice";
+import { VOICE_RUNTIME_CONTRACT } from "@/lib/voice-runtime";
 
 export const FRONTEND_DESIGN_GUIDE = `
 ## Frontend design (unique HTML per agent)
@@ -11,6 +13,7 @@ The deployed UI is **unique HTML you write via \`updateDeploymentCode\`** — no
 - After persona, instructions, and tools are configured, call \`updateDeploymentCode\` with a complete \`index.html\` file.
 - When the user asks to change the look, call \`updateDeploymentCode\` again with a **complete revised** \`index.html\` (full document, not a diff).
 - Call \`updateAgentUi\` first if you need to set welcome message / starter prompts that should appear in the HTML copy.
+- **Voice agents**: call \`enableVoice\` first — it generates a production-ready call UI. Do NOT rewrite index.html yourself unless the user explicitly requests visual changes.
 
 ### How to write the HTML
 
@@ -31,6 +34,24 @@ ${FRONTEND_RUNTIME_CONTRACT}
 export function buildFrontendDesignContext(spec: AgentSpec): string {
   const welcome = spec.ui?.welcomeMessage ?? `Hi! I'm ${spec.name}. How can I help?`;
   const starters = spec.ui?.starterPrompts?.join(", ") ?? "(create 2–3 domain-specific starters)";
+  const isVoice = inferVoiceFromSpec(spec);
+
+  if (isVoice) {
+    return `
+### Agent context for frontend copy (VOICE CALL AGENT — NOT A CHATBOT)
+
+- Name: ${spec.name}
+- Role: ${spec.persona.role || "Voice assistant"}
+- Tone: ${spec.persona.tone || "professional"}
+- Purpose: ${spec.instructions.slice(0, 500) || "voice support"}
+- UI template: **voice** (phone call interface)
+- Welcome/status copy: ${welcome}
+
+${VOICE_RUNTIME_CONTRACT}
+
+**Critical**: Do NOT build chat bubbles, text inputs, or starter prompt chips. Call \`enableVoice\` — it generates the call UI. Do not call \`updateDeploymentCode\` for voice unless the user asks to customize appearance.
+`.trim();
+  }
 
   return `
 ### Agent context for frontend copy

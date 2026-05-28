@@ -9,6 +9,7 @@ import {
   Hammer,
   Headphones,
   Mail,
+  Mic,
   Newspaper,
   Search,
   Square,
@@ -27,6 +28,7 @@ import type { BuildPhase } from "@/lib/build-phase";
 import { buildAnswerMessage, type ClarifyAnswer, type ClarifyBlock } from "@/lib/clarify-types";
 import type { PlanStepStatus, SwarmUIMessage } from "@/lib/chat-types";
 import { getChatMessageKey, isMissingToolResultError, sanitizeChatMessages } from "@/lib/chat-messages";
+import { isBuildComplete } from "@/lib/build-checklist";
 
 interface ChatPanelProps {
   agentSpec: AgentSpec;
@@ -55,6 +57,12 @@ const STARTER_PROMPTS = [
     label: "Customer support",
     text: "Create a customer support agent with a professional, empathetic tone.",
     accent: "from-violet/20 to-violet/5 text-violet-300",
+  },
+  {
+    icon: Mic,
+    label: "Voice agent",
+    text: "Build a voice call agent with ElevenLabs — users speak via mic and hear spoken replies.",
+    accent: "from-emerald-500/20 to-emerald-500/5 text-emerald-300",
   },
   {
     icon: Newspaper,
@@ -86,6 +94,7 @@ export function ChatPanel({
   const [clarifySubmitted, setClarifySubmitted] = useState(false);
   const [busySince, setBusySince] = useState<number | null>(null);
   const [stuckWarning, setStuckWarning] = useState(false);
+  const [buildIncomplete, setBuildIncomplete] = useState(false);
   const [debugOpen, setDebugOpen] = useState(false);
   const agentSpecRef = useRef(agentSpec);
   const buildPhaseRef = useRef(buildPhase);
@@ -162,6 +171,16 @@ export function ChatPanel({
   }, [isBusy, busySince]);
 
   useEffect(() => {
+    if (isBusy) {
+      setBuildIncomplete(false);
+      return;
+    }
+    if (buildPhase === "building" && displayMessages.length > 0) {
+      setBuildIncomplete(!isBuildComplete(agentSpec));
+    }
+  }, [isBusy, buildPhase, agentSpec, displayMessages.length]);
+
+  useEffect(() => {
     if (busySince === null) return;
     const id = setInterval(() => {
       if (Date.now() - busySince > 45_000) {
@@ -216,6 +235,7 @@ export function ChatPanel({
       buildPhaseRef.current === "discovery" &&
       looksLikeBuildIntent(trimmed)
     ) {
+      setPlanStepOverrides({});
       onBuildPhaseChange("building");
       buildPhaseRef.current = "building";
     }
@@ -226,10 +246,19 @@ export function ChatPanel({
 
   function startBuilding() {
     if (isBusy) return;
+    setPlanStepOverrides({});
+    setBuildIncomplete(false);
     onBuildPhaseChange("building");
     buildPhaseRef.current = "building";
     sendMessage({
-      text: "I'm ready — please build the agent based on our conversation.",
+      text: "Start building now. Execute the full build checklist in order using tools only — persona, instructions, tools, enableVoice if this is a voice agent, then frontend. Mark plan steps complete only as you finish each one. Do not stop or summarize until every required checklist item is done.",
+    });
+  }
+
+  function continueBuilding() {
+    if (isBusy) return;
+    sendMessage({
+      text: "Continue the build from where you left off. Check the build checklist and call the remaining tools until all required items are complete.",
     });
   }
 
@@ -328,6 +357,27 @@ export function ChatPanel({
           ))}
 
           {/* ClarifyModal is rendered via portal over the full page */}
+
+          {buildIncomplete && !isBusy && !error && (
+            <div className="flex items-start gap-2.5 rounded-xl border border-amber-500/30 bg-amber-500/[0.07] px-3.5 py-3">
+              <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-amber-400" />
+              <div className="min-w-0 flex-1">
+                <p className="text-[12.5px] font-medium text-amber-300">
+                  Build finished but agent is incomplete
+                </p>
+                <p className="mt-0.5 text-[11.5px] leading-relaxed text-amber-300/70">
+                  Some required steps were skipped (persona, instructions, or frontend). Click continue to finish the build.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={continueBuilding}
+                className="flex shrink-0 items-center gap-1.5 rounded-md border border-amber-500/30 bg-amber-500/10 px-2.5 py-1.5 text-[11px] font-medium text-amber-300 transition-colors hover:bg-amber-500/20"
+              >
+                Continue
+              </button>
+            </div>
+          )}
 
           {stuckWarning && !error && (
             <div className="flex items-start gap-2.5 rounded-xl border border-amber-500/30 bg-amber-500/[0.07] px-3.5 py-3">

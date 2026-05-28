@@ -1,5 +1,7 @@
 import type { AgentSpec } from "@/lib/agent-spec";
 import { resolveAgentUi } from "@/lib/agent-ui";
+import { inferVoiceFromSpec } from "@/lib/voice";
+import { VOICE_RUNTIME_CONTRACT } from "@/lib/voice-runtime";
 
 export const FRONTEND_RUNTIME_CONTRACT = `
 ## Required chat runtime (must work when deployed)
@@ -36,7 +38,20 @@ export function buildFrontendCodegenPrompt(
   const welcome =
     ui.welcomeMessage ?? `Hi! I'm ${spec.name}. How can I help you today?`;
 
-  const agentContext = `
+  const isVoice = inferVoiceFromSpec(spec);
+
+  const agentContext = isVoice
+    ? `
+## Agent context (VOICE CALL AGENT — NOT a chatbot)
+
+- **Name:** ${spec.name}
+- **Role:** ${spec.persona.role || "Voice assistant"}
+- **Tone:** ${spec.persona.tone || "professional and warm"}
+- **What it does:** ${spec.instructions.slice(0, 800) || "Voice support"}
+- **Tools:** ${spec.tools.map((t) => t.name).join(", ") || "none"}
+- **Status copy:** ${welcome}
+`.trim()
+    : `
 ## Agent context (weave into the UI copy and visual tone)
 
 - **Name:** ${spec.name}
@@ -47,6 +62,11 @@ export function buildFrontendCodegenPrompt(
 - **Welcome message to display:** ${welcome}
 - **Starter prompts:** ${starters.length ? starters.map((s) => `"${s}"`).join(", ") : "generate 2–3 relevant starters based on the agent's purpose"}
 `.trim();
+
+  const runtimeContract = isVoice ? VOICE_RUNTIME_CONTRACT : FRONTEND_RUNTIME_CONTRACT;
+  const interfaceKind = isVoice
+    ? "voice call interface (phone-style, NOT chat bubbles)"
+    : "chat interface";
 
   const revisionBlock = currentHtml
     ? `
@@ -60,7 +80,7 @@ ${currentHtml.slice(0, 12000)}${currentHtml.length > 12000 ? "\n<!-- truncated f
 `
     : "";
 
-  return `You are an expert frontend designer and developer. Generate a **complete, unique, self-contained HTML page** for this AI agent's chat interface.
+  return `You are an expert frontend designer and developer. Generate a **complete, unique, self-contained HTML page** for this AI agent's ${interfaceKind}.
 
 ${agentContext}
 
@@ -77,10 +97,10 @@ Output ONE complete HTML document (<!DOCTYPE html> through </html>). Requirement
 1. **Unique design** — Do NOT use a generic chat widget template. The visual design must reflect this specific agent's domain, audience, and personality. Vary layout, typography, color palette, spacing, and decorative elements every time.
 2. **Self-contained** — All CSS in \`<style>\` tags. No external CDN links. No frameworks.
 3. **Production quality** — Responsive, accessible contrast, polished typography, thoughtful micro-interactions via CSS only.
-4. **Agent-specific copy** — Headlines, welcome text, and starter prompts must reference what THIS agent actually does.
+4. **Agent-specific copy** — Headlines and status text must reference what THIS agent actually does.
 5. **Complete document** — Always output the FULL HTML. Never a snippet, diff, or partial update.
 
-${FRONTEND_RUNTIME_CONTRACT}
+${runtimeContract}
 
 ## Output format
 

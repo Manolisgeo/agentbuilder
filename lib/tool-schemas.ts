@@ -45,7 +45,7 @@ export const looseDeploymentCodeSchema = z.object({
   ),
 });
 
-const UI_TEMPLATES = ["chat", "widget", "landing"] as const;
+const UI_TEMPLATES = ["chat", "widget", "landing", "voice"] as const;
 const UI_LAYOUTS = ["sidebar", "fullscreen", "embedded"] as const;
 const UI_MODES = ["light", "dark", "auto"] as const;
 const UI_FONTS = ["sans", "serif", "mono"] as const;

@@ -4,6 +4,8 @@ import type { AgentSpec } from "./agent-spec";
 import { agentSlug, type ConnectorSlot } from "./connectors";
 import { getAgentFrontendHtml } from "./frontend-codegen";
 import { FRONTEND_PLACEHOLDER_HTML, injectChatRuntime } from "./frontend-runtime";
+import { injectVoiceDeployRuntime } from "./voice-runtime";
+import { inferVoiceFromSpec } from "./voice";
 
 export { agentSlug, planConnectors, type ConnectorSlot } from "./connectors";
 
@@ -89,9 +91,11 @@ export async function generateAgentFiles(
   ]);
 
   const savedHtml = getAgentFrontendHtml(spec);
-  const indexHtml = savedHtml
-    ? injectChatRuntime(savedHtml)
-    : injectChatRuntime(FRONTEND_PLACEHOLDER_HTML);
+  const isVoice = inferVoiceFromSpec(spec);
+  const rawHtml = savedHtml ?? FRONTEND_PLACEHOLDER_HTML;
+  const indexHtml = isVoice
+    ? injectVoiceDeployRuntime(rawHtml, spec.name)
+    : injectChatRuntime(rawHtml);
 
   const config = {
     name: spec.name,

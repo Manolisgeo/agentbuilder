@@ -14,7 +14,11 @@ import {
   type DeploymentPlatform,
 } from "@/lib/agent-ui";
 import { generateDeploymentFiles } from "@/lib/deployment-templates";
-import { injectChatRuntime } from "@/lib/frontend-runtime";
+import {
+  buildVoiceFrontendHtml,
+  hasVoiceFrontendHtml,
+  shouldRefreshVoiceHtml,
+} from "@/lib/voice-frontend-template";
 
 export function updatePersona(
   spec: AgentSpec,
@@ -117,6 +121,49 @@ export function setEnvVar(spec: AgentSpec, key: string, value: string): AgentSpe
   });
 }
 
+export function enableVoice(
+  spec: AgentSpec,
+  options?: { voiceId?: string; ttsModel?: string; sttModel?: string }
+): AgentSpec {
+  const currentUi = spec.ui ?? defaultAgentUi;
+  const withVoice = agentSpecSchema.parse({
+    ...spec,
+    voice: {
+      enabled: true,
+      voiceId: options?.voiceId ?? spec.voice?.voiceId,
+      ttsModel: options?.ttsModel ?? spec.voice?.ttsModel,
+      sttModel: options?.sttModel ?? spec.voice?.sttModel,
+    },
+    ui: {
+      ...currentUi,
+      template: "voice",
+      welcomeMessage:
+        currentUi.welcomeMessage ??
+        `Hi, I'm ${spec.name}. Tap the button to start talking.`,
+      starterPrompts: [],
+    },
+  });
+
+  if (hasVoiceFrontendHtml(withVoice) && !shouldRefreshVoiceHtml(withVoice)) {
+    return withVoice;
+  }
+
+  const otherFiles =
+    withVoice.deployment?.files.filter((f) => f.path !== "index.html") ?? [];
+  return updateDeploymentFiles(
+    withVoice,
+    [
+      ...otherFiles,
+      {
+        path: "index.html",
+        language: "html",
+        content: buildVoiceFrontendHtml(withVoice),
+      },
+    ],
+    { designInstruction: "Voice call UI template generated automatically" }
+  );
+}
+
 /** Updates UI metadata only — does NOT regenerate HTML (use generateAgentFrontend for that). */
 export function updateAgentUi(
   spec: AgentSpec,
@@ -169,7 +216,13 @@ export function updateDeploymentFiles(
 
   const processed = files.map((file) => {
     if (file.path === "index.html" && file.content.trim()) {
-      return { ...file, content: injectChatRuntime(file.content) };
+      return {
+        ...file,
+        content: file.content.replace(
+          /<script id="agent-(builder|voice)-(runtime|preview-bridge)"[\s\S]*?<\/script>/gi,
+          ""
+        ),
+      };
     }
     return file;
   });

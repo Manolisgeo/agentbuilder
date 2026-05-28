@@ -5,6 +5,7 @@ import {
 } from "./agent-spec";
 import { hasAgentFrontend } from "./deploy-html";
 import { resolveMemoryTemplates, type SwarmMemoryState } from "./swarm-memory";
+import { inferVoiceFromSpec } from "./voice";
 
 function getCurrentDateString(): string {
   return new Date().toLocaleDateString("en-US", {
@@ -103,6 +104,17 @@ Call \`renderDashboard\` for visual summaries of data that is NOT a list of arti
 - Do not use fetch() or XMLHttpRequest inside the HTML — all data must be baked in.
 - Use a clean, modern layout with a white background and readable typography.`;
 
+  const voiceSection = inferVoiceFromSpec(spec)
+    ? `
+
+## Voice conversation rules
+- The user is on a **live phone call** — your reply will be **spoken aloud** via text-to-speech.
+- Keep answers **short** (1–3 sentences). Only go longer if they explicitly ask for detail.
+- **Greet once** on the first turn only. On follow-up turns, answer the question directly — do not repeat "Welcome", "How can I help", or re-introduce yourself.
+- Use plain spoken English — no markdown, bullet lists, emojis, or URLs.
+- Be natural and conversational, not robotic or overly enthusiastic.`
+    : "";
+
   return `You are ${spec.name}, an AI agent deployed for end users.
 
 ## Current Date
@@ -114,7 +126,7 @@ Today is ${getCurrentDateString()}. Always use this as the authoritative date �
 
 ## Instructions
 ${spec.instructions}
-${toolsSection}${swarmSection}${dashboardSection}
+${toolsSection}${swarmSection}${dashboardSection}${voiceSection}
 
 Stay fully in character. You are speaking with an end user — not a developer. Be helpful, concise, and true to your defined tone.`;
 }

@@ -2,8 +2,11 @@
 
 import { memo, useMemo, useEffect, useRef, useState } from "react";
 import { getPreviewSrcDoc } from "@/lib/deploy-html";
-import { FRONTEND_PLACEHOLDER_HTML } from "@/lib/frontend-runtime";
-import type { FrontendFrameMode } from "@/lib/frontend-runtime";
+import {
+  FRONTEND_PLACEHOLDER_HTML,
+  type FrontendFrameMode,
+  type FrontendFrameOptions,
+} from "@/lib/frontend-runtime";
 import { cn } from "@/lib/utils";
 
 const IFRAME_DEBOUNCE_MS = 350;
@@ -11,6 +14,7 @@ const IFRAME_DEBOUNCE_MS = 350;
 interface AgentFrontendFrameProps {
   html: string | null;
   mode: FrontendFrameMode;
+  frameOptions?: FrontendFrameOptions;
   iframeRef?: React.RefObject<HTMLIFrameElement | null>;
   className?: string;
   title?: string;
@@ -34,6 +38,7 @@ function useDebounced<T>(value: T, delayMs: number): T {
 export const AgentFrontendFrame = memo(function AgentFrontendFrame({
   html,
   mode,
+  frameOptions,
   iframeRef,
   className,
   title,
@@ -43,8 +48,13 @@ export const AgentFrontendFrame = memo(function AgentFrontendFrame({
   const debouncedHtml = useDebounced(html, IFRAME_DEBOUNCE_MS);
 
   const srcDoc = useMemo(
-    () => getPreviewSrcDoc(debouncedHtml?.trim() ? debouncedHtml : FRONTEND_PLACEHOLDER_HTML, mode),
-    [debouncedHtml, mode]
+    () =>
+      getPreviewSrcDoc(
+        debouncedHtml?.trim() ? debouncedHtml : FRONTEND_PLACEHOLDER_HTML,
+        mode,
+        frameOptions
+      ),
+    [debouncedHtml, mode, frameOptions]
   );
 
   return (
@@ -54,7 +64,18 @@ export const AgentFrontendFrame = memo(function AgentFrontendFrame({
         title={title ?? "Agent frontend"}
         srcDoc={srcDoc}
         className="h-full w-full border-0"
-        sandbox={mode === "static" ? "" : "allow-scripts"}
+        sandbox={
+          mode === "static"
+            ? undefined
+            : frameOptions?.voice
+              ? "allow-scripts allow-same-origin"
+              : "allow-scripts"
+        }
+        allow={
+          mode !== "static" && frameOptions?.voice
+            ? "microphone; autoplay"
+            : undefined
+        }
       />
     </div>
   );

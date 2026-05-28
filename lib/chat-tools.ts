@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   addSubAgent,
   addTool,
+  enableVoice,
   removeSubAgent,
   removeTool,
   setEnvVar,
@@ -19,6 +20,7 @@ import {
   swarmMemoryKeySchema,
   type AgentSpec,
 } from "@/lib/agent-spec";
+import { inferVoiceFromSpec } from "@/lib/voice";
 import type { BuildPhase } from "@/lib/build-phase";
 import type { SwarmUIMessage } from "@/lib/chat-types";
 import { clarifyBlockSchema, type ClarifyBlock } from "@/lib/clarify-types";
@@ -190,19 +192,6 @@ Be factual and practical. If uncertain, say so.`,
           return fullPlan;
         }),
     },
-    updatePlanStep: {
-      description: "Update the status of a plan step as you work through it.",
-      inputSchema: updatePlanStepSchema,
-      execute: async (update: z.infer<typeof updatePlanStepSchema>) =>
-        runSafeTool(async () => {
-          writer.write({
-            type: "data-planStep",
-            id: `${update.planId}-${update.stepId}`,
-            data: update,
-          });
-          return update;
-        }),
-    },
     readArchitecture: {
       description:
         "Read the current agent architecture as a structured summary of all nodes.",
@@ -222,6 +211,20 @@ function buildingTools(
 ) {
   return {
     ...sharedTools(writer, getSpec, onClarifySuccess),
+    updatePlanStep: {
+      description:
+        "Mark a plan step in progress or completed. Only call after the step's work is actually done (building mode only).",
+      inputSchema: updatePlanStepSchema,
+      execute: async (update: z.infer<typeof updatePlanStepSchema>) =>
+        runSafeTool(async () => {
+          writer.write({
+            type: "data-planStep",
+            id: `${update.planId}-${update.stepId}`,
+            data: update,
+          });
+          return update;
+        }),
+    },
     updatePersona: {
       description:
         "Update the persona node (name, role, tone). Use for targeted edits to the agent identity.",
@@ -447,12 +450,24 @@ function buildingTools(
     },
     updateDeploymentCode: {
       description:
-        "Write or update deployment source files. Use this to create the agent's unique HTML frontend (index.html) — output a complete self-contained HTML document tailored to the agent. Also use for TypeScript, Python, React, or CSS files. On visual redesign, submit the full revised index.html.",
+        "Write or update deployment source files. For non-voice agents: submit a complete index.html. For voice agents: call enableVoice first (auto-generates HTML) — only use this to customize styling while keeping voice-call-btn, voice-status, voice-transcript, and hidden chat-form IDs.",
       inputSchema: looseDeploymentCodeSchema,
       execute: async (raw: z.infer<typeof looseDeploymentCodeSchema>) => {
         const parsed = parseDeploymentFilesInput(raw);
         if ("error" in parsed) {
           return { success: false, error: parsed.error };
+        }
+        const htmlFile = parsed.files.find((f) => f.path === "index.html");
+        if (
+          htmlFile?.content.trim() &&
+          inferVoiceFromSpec(getSpec()) &&
+          !htmlFile.content.includes('id="voice-call-btn"')
+        ) {
+          return {
+            success: false,
+            error:
+              'Voice index.html must include id="voice-call-btn", id="voice-status", id="voice-transcript", and hidden chat-form elements. Call enableVoice first, then only customize CSS/colors.',
+          };
         }
         return runSpecMutation(
           writer,
@@ -495,6 +510,30 @@ function buildingTools(
           setSpec,
           (spec) => setEnvVar(spec, key, value),
           { key }
+        ),
+    },
+    enableVoice: {
+      description:
+        "Enable ElevenLabs voice for this agent. Sets UI template to \"voice\" and auto-generates the voice call UI (index.html) with required IDs. Call when the user asks for a voice agent. Must be called BEFORE optional updateDeploymentCode styling tweaks.",
+      inputSchema: z.object({
+        voiceId: z
+          .string()
+          .optional()
+          .describe("Optional ElevenLabs voice ID from YOUR account — do not use library preset IDs"),
+        ttsModel: z.string().optional(),
+        sttModel: z.string().optional(),
+      }),
+      execute: async (options: {
+        voiceId?: string;
+        ttsModel?: string;
+        sttModel?: string;
+      }) =>
+        runSpecMutation(
+          writer,
+          getSpec,
+          setSpec,
+          (spec) => enableVoice(spec, options),
+          { voice: true }
         ),
     },
     updateMemoryKeys: {

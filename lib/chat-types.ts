@@ -62,6 +62,7 @@ export const TOOL_LABELS: Record<string, { active: string; done: string }> = {
   updateAgentUi: { active: "Updating UI copy", done: "UI copy updated" },
   updateDeploymentPlatform: { active: "Generating deployment code", done: "Deployment code generated" },
   updateDeploymentCode: { active: "Writing frontend", done: "Frontend updated" },
+  enableVoice: { active: "Enabling voice", done: "Voice enabled" },
 };
 
 export type CodegenUIMessage = UIMessage<

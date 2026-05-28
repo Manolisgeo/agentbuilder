@@ -1,4 +1,9 @@
 import type { AgentSpec } from "@/lib/agent-spec";
+import {
+  buildVoiceFrontendHtml,
+  shouldRefreshVoiceHtml,
+} from "@/lib/voice-frontend-template";
+import { inferVoiceFromSpec } from "@/lib/voice";
 
 /** Utilities for working with LLM-generated frontend HTML stored on the spec. */
 
@@ -26,6 +31,9 @@ export function extractHtmlFromLlmOutput(text: string): string | null {
 
 export function getAgentFrontendHtml(spec: AgentSpec): string | null {
   const saved = spec.deployment?.files.find((f) => f.path === "index.html")?.content;
+  if (inferVoiceFromSpec(spec) && shouldRefreshVoiceHtml(spec)) {
+    return buildVoiceFrontendHtml(spec);
+  }
   if (saved?.trim()) return saved;
   return null;
 }

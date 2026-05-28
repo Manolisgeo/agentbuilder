@@ -23,6 +23,20 @@ import type {
   PreviewUIMessage,
 } from "@/lib/preview-types";
 import type { MemoryWriteEvent } from "@/lib/swarm-memory";
+import { inferVoiceFromSpec } from "@/lib/voice";
+import {
+  createAudioRecorder,
+  isValidRecording,
+  startRecording,
+  stopRecording,
+} from "@/lib/voice-recording";
+import { transcribePreviewAudio } from "@/lib/voice-client";
+import {
+  arrayBufferToBase64,
+  fetchPreviewTtsAudio,
+  resetSpokenTexts,
+  shouldSpeakText,
+} from "@/lib/voice-preview-tts";
 
 interface PreviewPanelProps {
   agentSpec: AgentSpec;
@@ -50,11 +64,23 @@ export function PreviewPanel({
   const agentSpecRef = useRef(agentSpec);
   const onMemoryUpdateRef = useRef(onMemoryUpdate);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const mimeTypeRef = useRef("audio/webm");
+  const previewSendLockRef = useRef(false);
+  const assistantPostRef = useRef("");
   agentSpecRef.current = agentSpec;
   onMemoryUpdateRef.current = onMemoryUpdate;
 
   const isSwarm = Boolean(agentSpec.agents?.length);
   const hasLiveSearch = hasWebSearchTool(agentSpec);
+  const isVoice = inferVoiceFromSpec(agentSpec);
+  const voiceAgentName = isVoice ? agentSpec.name : "";
+  const voiceFrameOptions = useMemo(
+    () => (isVoice ? { voice: true, agentName: voiceAgentName } : undefined),
+    [isVoice, voiceAgentName]
+  );
+  const isVoicePreview = isVoice;
 
   const postToFrame = useCallback(
     (data: Record<string, unknown>) => {
@@ -66,6 +92,10 @@ export function PreviewPanel({
   // Throttle streaming text updates to avoid flooding the iframe on every chunk.
   const streamThrottleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingStreamRef = useRef<{ text: string; done: boolean } | null>(null);
+
+  const cancelVoiceTts = useCallback(() => {
+    postToFrame({ type: "agent-preview-tts-cancel" });
+  }, [postToFrame]);
 
   const transport = useMemo(
     () =>
@@ -126,16 +156,139 @@ export function PreviewPanel({
   }, [status]);
 
   useEffect(() => {
-    const handler = (event: MessageEvent) => {
-      if (event.data?.type !== "agent-preview-send") return;
-      const text = event.data.text;
-      if (typeof text === "string" && text.trim() && !isBusy) {
-        sendMessage({ text: text.trim() });
+    const handler = async (event: MessageEvent) => {
+      const d = event.data;
+      if (!d || typeof d !== "object") return;
+
+      if (d.type === "agent-preview-send") {
+        const text = d.text;
+        if (
+          typeof text === "string" &&
+          text.trim() &&
+          !isBusy &&
+          !previewSendLockRef.current
+        ) {
+          cancelVoiceTts();
+          previewSendLockRef.current = true;
+          sendMessage({ text: text.trim() });
+        }
+        return;
+      }
+
+      if (d.type === "agent-preview-record-start") {
+        cancelVoiceTts();
+        try {
+          if (recorderRef.current?.state === "recording") return;
+          const stream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+            },
+          });
+          streamRef.current = stream;
+          const { recorder, mimeType, getChunks } = createAudioRecorder(stream);
+          mimeTypeRef.current = mimeType;
+          recorderRef.current = recorder;
+          recorder.onstop = async () => {
+            stream.getTracks().forEach((t) => t.stop());
+            streamRef.current = null;
+            recorderRef.current = null;
+            await new Promise((r) => setTimeout(r, 80));
+            try {
+              const chunks = getChunks();
+              const blob = new Blob(chunks, { type: mimeTypeRef.current });
+              if (!isValidRecording(blob)) {
+                postToFrame({
+                  type: "agent-preview-stt-error",
+                  message:
+                    "Recording too short — tap Talk, speak for a second, then tap Stop.",
+                });
+                return;
+              }
+              const resp = await transcribePreviewAudio(
+                blob,
+                mimeTypeRef.current,
+                agentSpecRef.current
+              );
+              if (resp.ok && resp.text) {
+                postToFrame({ type: "agent-preview-stt-result", text: resp.text });
+              } else {
+                postToFrame({
+                  type: "agent-preview-stt-error",
+                  message: resp.error || "Could not transcribe audio.",
+                });
+              }
+            } catch (err) {
+              postToFrame({
+                type: "agent-preview-stt-error",
+                message:
+                  err instanceof Error
+                    ? err.message
+                    : "Speech-to-text failed.",
+              });
+            }
+          };
+          startRecording(recorder);
+        } catch {
+          postToFrame({
+            type: "agent-preview-record-error",
+            message:
+              "Microphone access denied — allow mic for localhost in your browser settings.",
+          });
+        }
+        return;
+      }
+
+      if (d.type === "agent-preview-record-stop") {
+        const rec = recorderRef.current;
+        if (rec?.state === "recording") {
+          await stopRecording(rec);
+        } else {
+          postToFrame({
+            type: "agent-preview-stt-error",
+            message: "No active recording — tap Talk and speak first.",
+          });
+        }
+        return;
+      }
+
+      if (d.type === "agent-preview-stt-request" && typeof d.audio === "string") {
+        try {
+          const binary = atob(d.audio);
+          const bytes = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+          const blob = new Blob([bytes], { type: "audio/webm" });
+          const data = await transcribePreviewAudio(
+            blob,
+            "audio/webm",
+            agentSpecRef.current
+          );
+          if (data.ok && data.text) {
+            postToFrame({ type: "agent-preview-stt-result", text: data.text });
+          } else {
+            postToFrame({
+              type: "agent-preview-stt-error",
+              message: data.error || "Could not transcribe audio.",
+            });
+          }
+        } catch {
+          postToFrame({
+            type: "agent-preview-stt-error",
+            message: "Speech-to-text failed.",
+          });
+        }
+        return;
       }
     };
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
-  }, [sendMessage, isBusy]);
+  }, [sendMessage, isBusy, postToFrame, cancelVoiceTts]);
+
+  useEffect(() => {
+    if (!isBusy) {
+      previewSendLockRef.current = false;
+    }
+  }, [isBusy]);
 
   useEffect(() => {
     if (lastMessage?.role !== "assistant") return;
@@ -151,6 +304,9 @@ export function PreviewPanel({
         streamThrottleRef.current = null;
       }
       pendingStreamRef.current = null;
+      const postKey = `${lastMessage.id}:done:${text}`;
+      if (assistantPostRef.current === postKey) return;
+      assistantPostRef.current = postKey;
       postToFrame({ type: "agent-preview-assistant", text, done: true });
       return;
     }
@@ -168,6 +324,34 @@ export function PreviewPanel({
     }
   }, [lastMessage, isBusy, postToFrame]);
 
+  // Speak each new assistant response once. Module-level dedup survives StrictMode remounts.
+  useEffect(() => {
+    if (!isVoicePreview) return;
+    if (isBusy) return;
+    if (lastMessage?.role !== "assistant") return;
+
+    const text = getAssistantText(lastMessage).trim();
+    if (!shouldSpeakText(text)) return;
+
+    postToFrame({ type: "agent-preview-tts-pending" });
+
+    void (async () => {
+      try {
+        const buffer = await fetchPreviewTtsAudio(text, agentSpecRef.current);
+        postToFrame({
+          type: "agent-preview-tts-audio",
+          audio: arrayBufferToBase64(buffer),
+        });
+      } catch (err) {
+        postToFrame({
+          type: "agent-preview-tts-error",
+          message:
+            err instanceof Error ? err.message : "Text-to-speech failed.",
+        });
+      }
+    })();
+  }, [lastMessage, isBusy, isVoicePreview, postToFrame]);
+
   useEffect(() => {
     if (error) {
       postToFrame({
@@ -183,6 +367,10 @@ export function PreviewPanel({
     setOrchestrationSteps([]);
     setDashboards([]);
     setArticleFeeds([]);
+    previewSendLockRef.current = false;
+    assistantPostRef.current = "";
+    resetSpokenTexts();
+    cancelVoiceTts();
     postToFrame({ type: "agent-preview-reset" });
   }
 
@@ -190,7 +378,9 @@ export function PreviewPanel({
     ? isSwarm
       ? "Live swarm — same UI as Design, with real tools"
       : "Live preview — same UI as Design, with web search"
-    : "Live preview — identical to the Design tab";
+    : voiceFrameOptions
+      ? "Live voice preview — ElevenLabs mic + spoken replies"
+      : "Live preview — identical to the Design tab";
 
   return (
     <HudPanel
@@ -255,6 +445,7 @@ export function PreviewPanel({
       <AgentFrontendFrame
         html={displayHtml}
         mode="live"
+        frameOptions={voiceFrameOptions}
         iframeRef={iframeRef}
         title={`${agentSpec.name} preview`}
       />
