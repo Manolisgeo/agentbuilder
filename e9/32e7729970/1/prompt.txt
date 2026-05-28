@@ -1,0 +1,21 @@
+googl egemini was in the middle of addin gliquid glass to lightmode before i ran out of tokens so continue and finihs it
+
+---
+
+you are changing how some thigns work i dark mode like with white outlines. Dont change darkmode. only work on lightmode. it needs better seperation, readability, and maybe liquid glass like IOS
+
+---
+
+theres like a hard box border on the outside of lightmode that is making like hard shadow corners in bottom right. And in dark mode there is some white stuff at the top border of each of the cards in the builder
+
+---
+
+theres like a hard box border on the outside of lightmode that is making like hard shadow corners in bottom right. And in dark mode there is some white stuff at the top border of each of the cards in the builder
+
+---
+
+restart the server
+
+---
+
+restart the server

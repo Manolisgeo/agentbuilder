@@ -3,7 +3,7 @@
   "checkpoint_id": "e932e7729970",
   "strategy": "manual-commit",
   "branch": "main",
-  "checkpoints_count": 3,
+  "checkpoints_count": 7,
   "files_touched": [
     "app/globals.css",
     "app/layout.tsx",
@@ -31,6 +31,8 @@
     "components/preview/swarm-orchestration-timeline.tsx",
     "components/preview/web-search-display.tsx",
     "components/resizable-workspace.tsx",
+    "components/theme-provider.tsx",
+    "components/theme-toggle.tsx",
     "package-lock.json",
     "package.json"
   ],
@@ -40,6 +42,12 @@
       "transcript": "/e9/32e7729970/0/full.jsonl",
       "content_hash": "/e9/32e7729970/0/content_hash.txt",
       "prompt": "/e9/32e7729970/0/prompt.txt"
+    },
+    {
+      "metadata": "/e9/32e7729970/1/metadata.json",
+      "transcript": "/e9/32e7729970/1/full.jsonl",
+      "content_hash": "/e9/32e7729970/1/content_hash.txt",
+      "prompt": "/e9/32e7729970/1/prompt.txt"
     }
   ]
 }
