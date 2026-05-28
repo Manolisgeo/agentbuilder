@@ -4,6 +4,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { agentSpecSchema } from "@/lib/agent-spec";
 import type { RuntimeInputs, SlotInput } from "@/lib/connectors";
+import { readTokens } from "@/lib/gmail-tokens";
 import {
   agentSlug,
   generateAgentFiles,
@@ -131,8 +132,12 @@ export async function POST(req: Request) {
           searchApiKey?: string;
         } = {
           slots: {},
-          searchApiKey: inputs.searchApiKey || process.env.SEARCH_API_KEY,
+          searchApiKey:
+            inputs.searchApiKey ||
+            process.env.TAVILY_API_KEY ||
+            process.env.SEARCH_API_KEY,
         };
+        let needsGmail = false;
         for (const c of plan) {
           const rt = inputs.slots?.[c.slot] ?? {};
           if (c.type === "file_search") {
@@ -145,16 +150,46 @@ export async function POST(req: Request) {
               );
             }
             agentConfig.slots[c.slot] = { glob: rt.glob || c.glob };
-          } else if (c.type === "http_api") {
+          } else if (c.type === "http_api" || c.type === "http_request") {
             agentConfig.slots[c.slot] = {
               baseUrl: rt.baseUrl || c.baseUrl,
               authHeader: rt.authHeader,
             };
           } else if (c.type === "db_query") {
             agentConfig.slots[c.slot] = { dbUrl: rt.dbUrl };
+          } else if (c.type === "slack_send") {
+            agentConfig.slots[c.slot] = { webhookUrl: rt.webhookUrl };
+          } else if (
+            c.type === "gmail_read_inbox" ||
+            c.type === "gmail_send_digest"
+          ) {
+            needsGmail = true;
           }
         }
-        args.push("-e", `AGENT_CONFIG=${JSON.stringify(agentConfig)}`, image);
+        args.push("-e", `AGENT_CONFIG=${JSON.stringify(agentConfig)}`);
+
+        // Gmail tools reuse the OAuth tokens + Google credentials the builder
+        // already stored, injected as container env. Read them at deploy time.
+        if (needsGmail) {
+          const tokens = await readTokens().catch(() => null);
+          const clientId =
+            spec.envVars?.GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID;
+          const clientSecret =
+            spec.envVars?.GOOGLE_CLIENT_SECRET ||
+            process.env.GOOGLE_CLIENT_SECRET;
+          if (tokens && clientId && clientSecret) {
+            args.push("-e", `GMAIL_TOKENS=${JSON.stringify(tokens)}`);
+            args.push("-e", `GOOGLE_CLIENT_ID=${clientId}`);
+            args.push("-e", `GOOGLE_CLIENT_SECRET=${clientSecret}`);
+            log("Injected Gmail OAuth tokens from the builder's connected account.");
+          } else {
+            log(
+              "WARNING: Gmail tool present but no stored OAuth tokens/credentials found — connect Gmail in the builder, then redeploy."
+            );
+          }
+        }
+
+        args.push(image);
 
         log(`Starting container on port ${port}…`);
         const run = await runStep("docker", args, (l) => log(l));
@@ -182,4 +217,50 @@ export async function POST(req: Request) {
       "Cache-Control": "no-cache",
     },
   });
+}
+
+// List running deployed agent containers (for the Deployments view).
+export async function GET() {
+  try {
+    const { code, out } = await runStep(
+      "docker",
+      [
+        "ps",
+        "--filter",
+        "name=agent-",
+        "--format",
+        "{{.Names}}|{{.Ports}}|{{.Status}}",
+      ],
+      () => {}
+    );
+    if (code !== 0) return Response.json({ deployments: [] });
+    const deployments = out
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const [name, ports = "", status = ""] = line.split("|");
+        const match = ports.match(/0\.0\.0\.0:(\d+)->8080/);
+        const port = match ? Number(match[1]) : null;
+        return {
+          name,
+          status,
+          port,
+          url: port ? `http://localhost:${port}` : null,
+        };
+      });
+    return Response.json({ deployments });
+  } catch {
+    return Response.json({ deployments: [] });
+  }
+}
+
+// Stop + remove a deployed agent container.
+export async function DELETE(req: Request) {
+  const name = new URL(req.url).searchParams.get("name") ?? "";
+  if (!/^agent-[a-z0-9-]+$/.test(name)) {
+    return Response.json({ error: "Invalid container name." }, { status: 400 });
+  }
+  const { code } = await runStep("docker", ["rm", "-f", name], () => {});
+  return Response.json({ ok: code === 0 });
 }

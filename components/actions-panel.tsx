@@ -9,8 +9,9 @@ import {
   Play,
   Rocket,
   Save,
+  Trash2,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { HudError } from "@/components/hud/hud-error";
@@ -115,6 +116,30 @@ export function ActionsPanel({
   const [deployError, setDeployError] = useState<string | null>(null);
   const [slotInputs, setSlotInputs] = useState<Record<string, SlotInput>>({});
   const [searchKey, setSearchKey] = useState("");
+  const [deployments, setDeployments] = useState<
+    { name: string; url: string | null; status: string }[]
+  >([]);
+
+  const refreshDeployments = useCallback(async () => {
+    try {
+      const r = await fetch("/api/deploy");
+      const d = await r.json();
+      setDeployments(d.deployments ?? []);
+    } catch {
+      // docker may be down; leave list empty
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshDeployments();
+  }, [refreshDeployments]);
+
+  async function stopDeployment(name: string) {
+    await fetch(`/api/deploy?name=${encodeURIComponent(name)}`, {
+      method: "DELETE",
+    }).catch(() => undefined);
+    refreshDeployments();
+  }
 
   function slotValue(c: ConnectorSlot, need: RuntimeNeed): string {
     const entered = slotInputs[c.slot]?.[need];
@@ -204,6 +229,7 @@ export function ActionsPanel({
       setDeployError(e instanceof Error ? e.message : "Deploy failed.");
     } finally {
       setIsDeploying(false);
+      refreshDeployments();
     }
   }
 
@@ -467,6 +493,52 @@ export function ActionsPanel({
             </p>
           )}
         </div>
+
+        {/* Deployments */}
+        {deployments.length > 0 && (
+          <div className="rounded-xl border border-white/[0.06] bg-gradient-to-b from-white/[0.03] to-transparent p-3.5">
+            <SectionHeader>Deployments</SectionHeader>
+            <div className="space-y-2">
+              {deployments.map((d) => (
+                <div
+                  key={d.name}
+                  className="flex items-center gap-2 rounded-md border border-white/[0.06] bg-white/[0.02] px-2.5 py-2"
+                >
+                  <span className="size-1.5 shrink-0 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.7)]" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[12px] text-foreground/90">
+                      {d.name.replace(/^agent-/, "")}
+                    </p>
+                    {d.url && (
+                      <p className="truncate font-mono text-[10px] text-muted-foreground">
+                        {d.url}
+                      </p>
+                    )}
+                  </div>
+                  {d.url && (
+                    <a
+                      href={d.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded p-1 text-system transition-colors hover:bg-system/[0.12]"
+                      title="Open"
+                    >
+                      <ExternalLink className="size-3.5" />
+                    </a>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => stopDeployment(d.name)}
+                    className="rounded p-1 text-muted-foreground transition-colors hover:bg-red-500/[0.12] hover:text-red-400"
+                    title="Stop"
+                  >
+                    <Trash2 className="size-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </HudPanel>
   );
