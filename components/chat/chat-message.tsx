@@ -57,8 +57,13 @@ export function ChatMessage({
   const isUser = message.role === "user";
 
   const textParts = message.parts.filter((part) => part.type === "text");
+  const SILENT_TOOLS = new Set([
+    "clarifyUser",      // shown as ClarifyCard
+    "updatePlanStep",   // reflected in plan card step status
+    "readArchitecture", // internal read, no user-visible output
+  ]);
   const toolParts = message.parts.filter(
-    (part) => isToolUIPart(part) && getToolName(part) !== "clarifyUser"
+    (part) => isToolUIPart(part) && !SILENT_TOOLS.has(getToolName(part))
   );
   const textContent = textParts
     .map((part) => (part.type === "text" ? part.text : ""))

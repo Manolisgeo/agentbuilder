@@ -72,7 +72,6 @@ export function ChatPanel({
   >({});
   const [clarifyBlock, setClarifyBlock] = useState<ClarifyBlock | null>(null);
   const [clarifySubmitted, setClarifySubmitted] = useState(false);
-  const [submittedAnswers, setSubmittedAnswers] = useState<Record<string, string | string[]>>({});
   const agentSpecRef = useRef(agentSpec);
   const buildPhaseRef = useRef(buildPhase);
   const scrollAnchorRef = useRef<HTMLDivElement>(null);
@@ -105,7 +104,6 @@ export function ChatPanel({
       if (dataPart.type === "data-clarify") {
         setClarifyBlock(dataPart.data as unknown as ClarifyBlock);
         setClarifySubmitted(false);
-        setSubmittedAnswers({});
       }
     },
     onError: (err) => {
@@ -150,11 +148,10 @@ export function ChatPanel({
 
   function handleClarifySubmit(answers: ClarifyAnswer[]) {
     if (!clarifyBlock) return;
-    const answerMap: Record<string, string | string[]> = {};
-    for (const a of answers) answerMap[a.id] = a.answer;
-    setSubmittedAnswers(answerMap);
-    setClarifySubmitted(true);
-    sendMessage({ text: buildAnswerMessage(clarifyBlock, answers) });
+    const text = buildAnswerMessage(clarifyBlock, answers);
+    setClarifyBlock(null);
+    setClarifySubmitted(false);
+    sendMessage({ text });
   }
 
   function submitPrompt(text: string) {
@@ -277,8 +274,6 @@ export function ChatPanel({
             <ClarifyCard
               block={clarifyBlock}
               onSubmit={handleClarifySubmit}
-              submitted={clarifySubmitted}
-              submittedAnswers={submittedAnswers}
             />
           )}
 
