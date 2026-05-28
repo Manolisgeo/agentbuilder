@@ -99,10 +99,24 @@ export interface SlotInput {
   dbUrl?: string;
   webhookUrl?: string;
 }
+// Optional ElevenLabs voice config collected by the deploy form. The deployed
+// agent gets speech-to-text (mic) + text-to-speech (playback). apiKey is a
+// secret passed as container env; the rest go in AGENT_CONFIG.voice.
+export interface VoiceInput {
+  enabled?: boolean;
+  apiKey?: string;
+  voiceId?: string;
+  ttsModel?: string;
+  sttModel?: string;
+}
 export interface RuntimeInputs {
   slots?: Record<string, SlotInput>;
   searchApiKey?: string;
+  voice?: VoiceInput;
 }
+
+export const DEFAULT_TTS_MODEL = "eleven_turbo_v2_5";
+export const DEFAULT_STT_MODEL = "scribe_v1";
 
 export const NEED_LABELS: Record<RuntimeNeed, string> = {
   path: "Folder path (on this machine)",

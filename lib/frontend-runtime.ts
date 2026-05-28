@@ -22,6 +22,7 @@ export function buildChatRuntimeScript(): string {
   if (!form || !input || !sendBtn || !chatLog) return;
 
   var messages = [];
+  var speak = null;
 
   function showChat() {
     if (welcome) welcome.classList.add("hidden");
@@ -66,6 +67,7 @@ export function buildChatRuntimeScript(): string {
     }
     if (!acc) el.textContent = "[no response]";
     else messages.push({ role: "assistant", content: acc });
+    if (acc && speak) speak(acc);
     sendBtn.disabled = false;
   }
 
@@ -90,6 +92,74 @@ export function buildChatRuntimeScript(): string {
       form.requestSubmit();
     }
   });
+
+  // ElevenLabs voice (mic + speaker), enabled only when the server reports it.
+  (async function () {
+    var voiceOk = false;
+    try {
+      var h = await fetch("/health").then(function (r) { return r.json(); });
+      voiceOk = Boolean(h && h.voice);
+    } catch (e) {}
+    if (!voiceOk) return;
+
+    var speakerOn = true;
+    speak = async function (text) {
+      if (!speakerOn) return;
+      try {
+        var r = await fetch("/api/tts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: text }),
+        });
+        if (!r.ok) return;
+        var blob = await r.blob();
+        new Audio(URL.createObjectURL(blob)).play().catch(function () {});
+      } catch (e) {}
+    };
+
+    var btnCss = "margin-left:6px;padding:0 10px;height:36px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:inherit;cursor:pointer;font:inherit;font-size:12px;";
+
+    var spk = document.createElement("button");
+    spk.type = "button";
+    spk.textContent = "Speaker on";
+    spk.style.cssText = btnCss;
+    spk.addEventListener("click", function () {
+      speakerOn = !speakerOn;
+      spk.textContent = speakerOn ? "Speaker on" : "Speaker off";
+    });
+
+    var mic = document.createElement("button");
+    mic.type = "button";
+    mic.textContent = "Mic";
+    mic.style.cssText = btnCss;
+    var recorder = null;
+    var chunks = [];
+    mic.addEventListener("click", async function () {
+      if (recorder && recorder.state === "recording") { recorder.stop(); return; }
+      try {
+        var stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        recorder = new MediaRecorder(stream);
+        chunks = [];
+        recorder.ondataavailable = function (e) { if (e.data.size) chunks.push(e.data); };
+        recorder.onstop = async function () {
+          stream.getTracks().forEach(function (t) { t.stop(); });
+          mic.textContent = "Mic";
+          mic.disabled = true;
+          try {
+            var r = await fetch("/api/stt", { method: "POST", headers: { "Content-Type": "audio/webm" }, body: new Blob(chunks, { type: "audio/webm" }) });
+            var d = await r.json();
+            if (d && d.text) { input.value = d.text; form.requestSubmit(); }
+          } catch (e) {}
+          mic.disabled = false;
+        };
+        recorder.start();
+        mic.textContent = "Stop";
+      } catch (e) {}
+    });
+
+    form.appendChild(spk);
+    form.appendChild(mic);
+  })();
 })();
 `.trim();
 }

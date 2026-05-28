@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { DeploymentCodePanel } from "@/components/design/deployment-code-panel";
 import { StyleConfigPanel } from "@/components/design/style-config-panel";
 import { HudError } from "@/components/hud/hud-error";
@@ -138,6 +139,11 @@ export function ActionsPanel({
     command: string;
     env: Record<string, string>;
   } | null>(null);
+  const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const [voiceKey, setVoiceKey] = useState("");
+  const [voiceId, setVoiceId] = useState("");
+  const [ttsModel, setTtsModel] = useState("eleven_turbo_v2_5");
+  const [sttModel, setSttModel] = useState("scribe_v1");
   const [deployments, setDeployments] = useState<
     { name: string; url: string | null; status: string }[]
   >([]);
@@ -195,6 +201,15 @@ export function ActionsPanel({
           runtime: {
             slots: slotInputs,
             searchApiKey: searchKey.trim() || undefined,
+            voice: voiceEnabled
+              ? {
+                  enabled: true,
+                  apiKey: voiceKey.trim() || undefined,
+                  voiceId: voiceId.trim() || undefined,
+                  ttsModel,
+                  sttModel,
+                }
+              : undefined,
           },
         }),
       });
@@ -491,6 +506,54 @@ export function ActionsPanel({
               </div>
             </div>
           )}
+
+          <div className="mb-3 space-y-2 rounded-md border border-white/[0.06] bg-white/[0.02] p-2.5">
+            <label className="flex items-center gap-2 text-[11.5px] text-foreground/90">
+              <input
+                type="checkbox"
+                checked={voiceEnabled}
+                onChange={(e) => setVoiceEnabled(e.target.checked)}
+                disabled={isDeploying}
+                className="accent-primary"
+              />
+              Voice (ElevenLabs) — mic + spoken replies
+            </label>
+            {voiceEnabled && (
+              <div className="space-y-1.5">
+                <Input
+                  type="password"
+                  placeholder="ElevenLabs API key"
+                  value={voiceKey}
+                  onChange={(e) => setVoiceKey(e.target.value)}
+                  disabled={isDeploying}
+                  className="h-8 border-white/[0.08] bg-white/[0.02] text-[12px]"
+                />
+                <Input
+                  placeholder="Voice ID (from elevenlabs.io)"
+                  value={voiceId}
+                  onChange={(e) => setVoiceId(e.target.value)}
+                  disabled={isDeploying}
+                  className="h-8 border-white/[0.08] bg-white/[0.02] text-[12px]"
+                />
+                <div className="flex gap-1.5">
+                  <Input
+                    placeholder="TTS model"
+                    value={ttsModel}
+                    onChange={(e) => setTtsModel(e.target.value)}
+                    disabled={isDeploying}
+                    className="h-8 border-white/[0.08] bg-white/[0.02] text-[12px]"
+                  />
+                  <Input
+                    placeholder="STT model"
+                    value={sttModel}
+                    onChange={(e) => setSttModel(e.target.value)}
+                    disabled={isDeploying}
+                    className="h-8 border-white/[0.08] bg-white/[0.02] text-[12px]"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
 
           <Button
             className={cn(
