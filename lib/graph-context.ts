@@ -1,4 +1,5 @@
 import type { AgentSpec } from "@/lib/agent-spec";
+import { resolveAgentDeployment, resolveAgentUi } from "@/lib/agent-ui";
 
 export function formatArchitectureContext(spec: AgentSpec): string {
   const lines: string[] = ["## Current agent architecture", ""];
@@ -50,6 +51,27 @@ export function formatArchitectureContext(spec: AgentSpec): string {
   lines.push(`- addTool / removeTool — tool nodes connected to persona`);
   lines.push(`- addSubAgent / updateSubAgent / removeSubAgent — swarm sub-agents`);
   lines.push(`- updateAgentSpec — bulk patch when many fields change at once`);
+  lines.push(`- updateAgentUi — deployed UI template, layout, theme, welcome message`);
+  lines.push(`- updateDeploymentPlatform — generate HTML/TS/Python/React deployment code`);
+  lines.push(`- updateDeploymentCode — customize deployment source files`);
+
+  const ui = resolveAgentUi(spec.ui);
+  const deployment = resolveAgentDeployment(spec.deployment);
+
+  lines.push("");
+  lines.push(`### Deployed UI design`);
+  lines.push(`- Template: ${ui.template}`);
+  lines.push(`- Layout: ${ui.layout}`);
+  lines.push(`- Theme: ${ui.theme.mode} mode, primary ${ui.theme.primaryColor}, font ${ui.theme.fontFamily}`);
+  lines.push(`- Welcome: ${ui.welcomeMessage ?? "(default)"}`);
+  if (ui.starterPrompts?.length) {
+    lines.push(`- Starter prompts: ${ui.starterPrompts.join(" | ")}`);
+  }
+
+  lines.push("");
+  lines.push(`### Deployment`);
+  lines.push(`- Platform: ${deployment.platform}`);
+  lines.push(`- Files: ${deployment.files.length > 0 ? deployment.files.map((f) => f.path).join(", ") : "(not generated yet)"}`);
 
   return lines.join("\n");
 }

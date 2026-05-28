@@ -4,6 +4,7 @@ import { Bot, User } from "lucide-react";
 import { getToolName, isToolUIPart, type UIMessage } from "ai";
 import { ToolCallDisplay } from "@/components/chat/tool-call-display";
 import type { PlanStepStatus } from "@/lib/chat-types";
+import { sanitizeAssistantChatText } from "@/lib/chat-display";
 import { cn } from "@/lib/utils";
 
 interface ChatMessageProps {
@@ -62,17 +63,24 @@ export function ChatMessage({
 
   const textParts = message.parts.filter((part) => part.type === "text");
   const SILENT_TOOLS = new Set([
-    "clarifyUser",      // shown as ClarifyCard
-    "updatePlanStep",   // reflected in plan card step status
+    "clarifyUser", // shown as ClarifyCard
+    "updatePlanStep", // reflected in plan card step status
     "readArchitecture", // internal read, no user-visible output
+    "updateAgentUi",
+    "updateDeploymentPlatform",
+    "updateDeploymentCode",
   ]);
   const toolParts = message.parts.filter(
     (part) => isToolUIPart(part) && !SILENT_TOOLS.has(getToolName(part))
   );
-  const textContent = textParts
+  const rawTextContent = textParts
     .map((part) => (part.type === "text" ? part.text : ""))
     .join("")
     .trim();
+  const textContent =
+    !isUser && rawTextContent
+      ? sanitizeAssistantChatText(rawTextContent)
+      : rawTextContent;
 
   if (!textContent && toolParts.length === 0) return null;
 

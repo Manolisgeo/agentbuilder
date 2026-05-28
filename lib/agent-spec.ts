@@ -1,4 +1,12 @@
 import { z } from "zod";
+import {
+  agentDeploymentSchema,
+  agentUiSchema,
+  defaultAgentDeployment,
+  defaultAgentUi,
+  type AgentDeployment,
+  type AgentUi,
+} from "@/lib/agent-ui";
 
 export const TOOL_TYPES = [
   "web_search",
@@ -57,8 +65,9 @@ export const agentSpecSchema = z.object({
   tools: z.array(toolSchema),
   agents: z.array(swarmAgentSchema).optional(),
   swarmMemory: z.array(swarmMemoryKeySchema).optional(),
-  // collected credentials / env vars (key → value, e.g. GOOGLE_CLIENT_ID)
   envVars: z.record(z.string(), z.string()).optional(),
+  ui: agentUiSchema.optional(),
+  deployment: agentDeploymentSchema.optional(),
 });
 
 export const agentSpecPatchSchema = agentSpecSchema.partial().extend({
@@ -78,6 +87,10 @@ export const agentSpecPatchSchema = agentSpecSchema.partial().extend({
     .optional(),
   swarmMemory: z.array(swarmMemoryKeySchema).optional(),
   envVars: z.record(z.string(), z.string()).optional(),
+  ui: agentUiSchema.partial().extend({
+    theme: agentUiSchema.shape.theme.partial().optional(),
+  }).optional(),
+  deployment: agentDeploymentSchema.partial().optional(),
 });
 
 export type AgentSpec = z.infer<typeof agentSpecSchema>;
@@ -85,14 +98,203 @@ export type AgentSpecPatch = z.infer<typeof agentSpecPatchSchema>;
 export type SwarmAgent = z.infer<typeof swarmAgentSchema>;
 export type SwarmMemoryKey = z.infer<typeof swarmMemoryKeySchema>;
 
+export type { AgentUi, AgentDeployment };
+
 export const defaultAgentSpec: AgentSpec = {
   name: "Untitled Agent",
   persona: { role: "", tone: "" },
   instructions: "",
   tools: [],
+  ui: defaultAgentUi,
+  deployment: defaultAgentDeployment,
 };
 
 export const MAX_SWARM_AGENTS = 4;
+
+const UI_TEMPLATES = ["chat", "widget", "landing"] as const;
+const UI_LAYOUTS = ["sidebar", "fullscreen", "embedded"] as const;
+const UI_MODES = ["light", "dark", "auto"] as const;
+const UI_FONTS = ["sans", "serif", "mono"] as const;
+const UI_RADII = ["none", "md", "full"] as const;
+const DEPLOYMENT_PLATFORMS = ["html", "typescript", "python", "react"] as const;
+const DEPLOYMENT_LANGUAGES = [
+  "typescript",
+  "python",
+  "html",
+  "css",
+  "javascript",
+  "tsx",
+] as const;
+
+function pickEnum<T extends string>(
+  value: unknown,
+  allowed: readonly T[],
+  fallback: T
+): T {
+  if (typeof value !== "string") return fallback;
+  const normalized = value.toLowerCase().trim().replace(/[\s-]+/g, "_");
+  const exact = allowed.find((item) => item === normalized);
+  if (exact) return exact;
+  const fuzzy = allowed.find(
+    (item) => normalized.includes(item) || item.includes(normalized)
+  );
+  return fuzzy ?? fallback;
+}
+
+function coerceTools(tools: unknown, fallback: AgentSpec["tools"]): AgentSpec["tools"] {
+  if (!Array.isArray(tools)) return fallback;
+  return tools
+    .filter((tool): tool is Record<string, unknown> => typeof tool === "object" && tool !== null)
+    .map((tool, index) => ({
+      id: typeof tool.id === "string" && tool.id.length > 0 ? tool.id : `tool-${index + 1}`,
+      name: typeof tool.name === "string" && tool.name.length > 0 ? tool.name : "Tool",
+      type: typeof tool.type === "string" && tool.type.length > 0 ? tool.type : "web_search",
+      ...(typeof tool.path === "string" ? { path: tool.path } : {}),
+      ...(typeof tool.glob === "string" ? { glob: tool.glob } : {}),
+      ...(typeof tool.baseUrl === "string" ? { baseUrl: tool.baseUrl } : {}),
+      ...(tool.engine === "postgres" || tool.engine === "mysql" || tool.engine === "sqlite"
+        ? { engine: tool.engine }
+        : {}),
+    }));
+}
+
+function coerceAgents(agents: unknown): AgentSpec["agents"] {
+  if (!Array.isArray(agents)) return undefined;
+  return agents
+    .filter((agent): agent is Record<string, unknown> => typeof agent === "object" && agent !== null)
+    .map((agent, index) => ({
+      id: typeof agent.id === "string" && agent.id.length > 0 ? agent.id : `agent-${index + 1}`,
+      role: typeof agent.role === "string" && agent.role.length > 0 ? agent.role : "Sub-agent",
+      instructions: typeof agent.instructions === "string" ? agent.instructions : "",
+      dependsOn: Array.isArray(agent.dependsOn) ? agent.dependsOn.map(String) : [],
+      ...(typeof agent.memory === "object" && agent.memory !== null
+        ? {
+            memory: {
+              reads: Array.isArray((agent.memory as Record<string, unknown>).reads)
+                ? (agent.memory as { reads: unknown[] }).reads.map(String)
+                : [],
+              writes: Array.isArray((agent.memory as Record<string, unknown>).writes)
+                ? (agent.memory as { writes: unknown[] }).writes.map(String)
+                : [],
+            },
+          }
+        : {}),
+    }));
+}
+
+function coerceUi(ui: unknown, fallback: AgentUi): AgentUi {
+  if (typeof ui !== "object" || ui === null) return fallback;
+  const raw = ui as Record<string, unknown>;
+  const themeRaw =
+    typeof raw.theme === "object" && raw.theme !== null
+      ? (raw.theme as Record<string, unknown>)
+      : {};
+
+  return {
+    template: pickEnum(raw.template, UI_TEMPLATES, fallback.template),
+    layout: pickEnum(raw.layout, UI_LAYOUTS, fallback.layout),
+    welcomeMessage:
+      typeof raw.welcomeMessage === "string" ? raw.welcomeMessage : fallback.welcomeMessage,
+    starterPrompts: Array.isArray(raw.starterPrompts)
+      ? raw.starterPrompts.map(String)
+      : fallback.starterPrompts,
+    theme: {
+      primaryColor:
+        typeof themeRaw.primaryColor === "string"
+          ? themeRaw.primaryColor
+          : fallback.theme.primaryColor,
+      accentColor:
+        typeof themeRaw.accentColor === "string"
+          ? themeRaw.accentColor
+          : fallback.theme.accentColor,
+      backgroundColor:
+        typeof themeRaw.backgroundColor === "string"
+          ? themeRaw.backgroundColor
+          : fallback.theme.backgroundColor,
+      fontFamily: pickEnum(themeRaw.fontFamily, UI_FONTS, fallback.theme.fontFamily),
+      borderRadius: pickEnum(themeRaw.borderRadius, UI_RADII, fallback.theme.borderRadius),
+      mode: pickEnum(themeRaw.mode, UI_MODES, fallback.theme.mode),
+    },
+  };
+}
+
+function coerceDeployment(
+  deployment: unknown,
+  fallback: AgentDeployment
+): AgentDeployment {
+  if (typeof deployment !== "object" || deployment === null) return fallback;
+  const raw = deployment as Record<string, unknown>;
+  const files = Array.isArray(raw.files)
+    ? raw.files
+        .filter((file): file is Record<string, unknown> => typeof file === "object" && file !== null)
+        .map((file) => {
+          const path = typeof file.path === "string" ? file.path : "index.html";
+          return {
+            path,
+            language: pickEnum(
+              file.language,
+              DEPLOYMENT_LANGUAGES,
+              path.endsWith(".tsx") ? "tsx" : path.endsWith(".html") ? "html" : "typescript"
+            ),
+            content: typeof file.content === "string" ? file.content : "",
+          };
+        })
+    : fallback.files;
+
+  return {
+    platform: pickEnum(raw.platform, DEPLOYMENT_PLATFORMS, fallback.platform),
+    files,
+  };
+}
+
+/** Lenient parse for streamed/partial specs so the canvas never resets to empty. */
+export function normalizeAgentSpec(
+  input: unknown,
+  fallback: AgentSpec = defaultAgentSpec
+): AgentSpec {
+  const parsed = agentSpecSchema.safeParse(input);
+  if (parsed.success) return parsed.data;
+
+  if (!input || typeof input !== "object") return fallback;
+
+  const raw = input as Record<string, unknown>;
+  const coerced = {
+    name: typeof raw.name === "string" ? raw.name : fallback.name,
+    persona: {
+      role:
+        typeof (raw.persona as Record<string, unknown> | undefined)?.role === "string"
+          ? (raw.persona as { role: string }).role
+          : fallback.persona.role,
+      tone:
+        typeof (raw.persona as Record<string, unknown> | undefined)?.tone === "string"
+          ? (raw.persona as { tone: string }).tone
+          : fallback.persona.tone,
+    },
+    instructions:
+      typeof raw.instructions === "string" ? raw.instructions : fallback.instructions,
+    tools: coerceTools(raw.tools, fallback.tools),
+    ...(raw.agents !== undefined
+      ? { agents: coerceAgents(raw.agents) }
+      : fallback.agents
+        ? { agents: fallback.agents }
+        : {}),
+    ...(Array.isArray(raw.swarmMemory)
+      ? { swarmMemory: raw.swarmMemory }
+      : fallback.swarmMemory
+        ? { swarmMemory: fallback.swarmMemory }
+        : {}),
+    ...(raw.envVars && typeof raw.envVars === "object" && !Array.isArray(raw.envVars)
+      ? { envVars: raw.envVars as Record<string, string> }
+      : fallback.envVars
+        ? { envVars: fallback.envVars }
+        : {}),
+    ui: coerceUi(raw.ui, fallback.ui ?? defaultAgentUi),
+    deployment: coerceDeployment(raw.deployment, fallback.deployment ?? defaultAgentDeployment),
+  };
+
+  const result = agentSpecSchema.safeParse(coerced);
+  return result.success ? result.data : fallback;
+}
 
 export function mergeAgentSpec(
   current: AgentSpec,
@@ -109,6 +311,30 @@ export function mergeAgentSpec(
     mergedMemory = Array.from(existingByKey.values());
   }
 
+  const currentUi = current.ui ?? defaultAgentUi;
+  const patchUi = patch.ui;
+  const mergedUi = patchUi
+    ? {
+        template: patchUi.template ?? currentUi.template,
+        layout: patchUi.layout ?? currentUi.layout,
+        welcomeMessage: patchUi.welcomeMessage ?? currentUi.welcomeMessage,
+        starterPrompts: patchUi.starterPrompts ?? currentUi.starterPrompts,
+        theme: {
+          ...currentUi.theme,
+          ...patchUi.theme,
+        },
+      }
+    : currentUi;
+
+  const currentDeployment = current.deployment ?? defaultAgentDeployment;
+  const patchDeployment = patch.deployment;
+  const mergedDeployment = patchDeployment
+    ? {
+        platform: patchDeployment.platform ?? currentDeployment.platform,
+        files: patchDeployment.files ?? currentDeployment.files,
+      }
+    : currentDeployment;
+
   const merged: AgentSpec = {
     name: patch.name ?? current.name,
     persona: {
@@ -124,14 +350,31 @@ export function mergeAgentSpec(
     envVars: patch.envVars
       ? { ...(current.envVars ?? {}), ...patch.envVars }
       : current.envVars,
+    ui: mergedUi,
+    deployment: mergedDeployment,
   };
 
-  return agentSpecSchema.parse(merged);
+  const result = agentSpecSchema.safeParse(merged);
+  if (result.success) return result.data;
+  return normalizeAgentSpec(merged, current);
+}
+
+export function mergeAgentSpecSafe(
+  current: AgentSpec,
+  patch: AgentSpecPatch
+): { spec: AgentSpec } | { error: string } {
+  try {
+    return { spec: mergeAgentSpec(current, patch) };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Invalid agent spec patch",
+    };
+  }
 }
 
 export function parseAgentSpec(data: unknown): AgentSpec | null {
-  const result = agentSpecSchema.safeParse(data);
-  return result.success ? result.data : null;
+  const normalized = normalizeAgentSpec(data);
+  return agentSpecSchema.safeParse(normalized).success ? normalized : null;
 }
 
 export function isAgentSpecEmpty(spec: AgentSpec): boolean {
@@ -142,5 +385,15 @@ export function isAgentSpecEmpty(spec: AgentSpec): boolean {
     !spec.instructions &&
     spec.tools.length === 0 &&
     !spec.agents?.length
+  );
+}
+
+export function hasCustomDesign(spec: AgentSpec): boolean {
+  const ui = spec.ui ?? defaultAgentUi;
+  return (
+    ui.template !== defaultAgentUi.template ||
+    ui.layout !== defaultAgentUi.layout ||
+    ui.theme.primaryColor !== defaultAgentUi.theme.primaryColor ||
+    Boolean(ui.welcomeMessage && ui.welcomeMessage !== defaultAgentUi.welcomeMessage)
   );
 }

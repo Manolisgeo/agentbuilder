@@ -16,6 +16,7 @@ import {
 import {
   defaultAgentSpec,
   isAgentSpecEmpty,
+  normalizeAgentSpec,
   type AgentSpec,
 } from "@/lib/agent-spec";
 import type { BuildPhase } from "@/lib/build-phase";
@@ -32,7 +33,7 @@ export default function Home() {
   const [latestWrittenKeys, setLatestWrittenKeys] = useState<Set<string>>(new Set());
 
   const handleSpecUpdate = useCallback((spec: AgentSpec) => {
-    setAgentSpec(spec);
+    setAgentSpec((current) => normalizeAgentSpec(spec, current));
   }, []);
 
   const handleMemoryUpdate = useCallback((event: MemoryWriteEvent) => {
@@ -161,6 +162,8 @@ export default function Home() {
                   statusLabel={statusLabel}
                   isBuilding={isBuilding}
                   onPreview={() => setCenterView("preview")}
+                  onDesign={() => setCenterView("design")}
+                  onSpecUpdate={handleSpecUpdate}
                   memoryState={memoryState}
                   lastWrittenBy={lastWrittenBy}
                   latestWrittenKeys={latestWrittenKeys}

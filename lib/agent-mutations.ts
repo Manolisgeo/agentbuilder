@@ -4,6 +4,17 @@ import {
   type AgentSpec,
   type SwarmAgent,
 } from "@/lib/agent-spec";
+import {
+  agentDeploymentSchema,
+  agentUiSchema,
+  defaultAgentDeployment,
+  defaultAgentUi,
+  type AgentDeployment,
+  type AgentUi,
+  type DeploymentPlatform,
+} from "@/lib/agent-ui";
+import { syncDeployment } from "@/lib/deployment-templates";
+import { buildDeployHtml, getDeployCustomCss } from "@/lib/deploy-html";
 
 export function updatePersona(
   spec: AgentSpec,
@@ -95,5 +106,67 @@ export function setEnvVar(spec: AgentSpec, key: string, value: string): AgentSpe
   return agentSpecSchema.parse({
     ...spec,
     envVars: { ...(spec.envVars ?? {}), [key]: value },
+  });
+}
+
+export function updateAgentUi(
+  spec: AgentSpec,
+  patch: Partial<AgentUi> & { theme?: Partial<AgentUi["theme"]> }
+): AgentSpec {
+  const current = spec.ui ?? defaultAgentUi;
+  const nextUi = agentUiSchema.parse({
+    ...current,
+    ...patch,
+    theme: { ...current.theme, ...patch.theme },
+  });
+  const next = agentSpecSchema.parse({ ...spec, ui: nextUi });
+  return agentSpecSchema.parse({
+    ...next,
+    deployment: syncDeployment(next),
+  });
+}
+
+export function updateDeploymentPlatform(
+  spec: AgentSpec,
+  platform: DeploymentPlatform
+): AgentSpec {
+  return agentSpecSchema.parse({
+    ...spec,
+    deployment: syncDeployment(spec, platform),
+  });
+}
+
+export function updateDeploymentFiles(
+  spec: AgentSpec,
+  files: AgentDeployment["files"],
+  options?: { editedPath?: string }
+): AgentSpec {
+  const current = spec.deployment ?? defaultAgentDeployment;
+  const customCss =
+    files.find((f) => f.path === "custom.css")?.content ?? getDeployCustomCss(spec);
+  const shouldRegenHtml = options?.editedPath !== "index.html";
+
+  let mergedFiles = files;
+  if (shouldRegenHtml) {
+    const htmlContent = buildDeployHtml(spec, { mode: "runtime", customCss });
+    const hasIndex = files.some((f) => f.path === "index.html");
+    mergedFiles = hasIndex
+      ? files.map((file) =>
+          file.path === "index.html"
+            ? { ...file, language: "html" as const, content: htmlContent }
+            : file
+        )
+      : [
+          ...files,
+          { path: "index.html", language: "html" as const, content: htmlContent },
+        ];
+  }
+
+  return agentSpecSchema.parse({
+    ...spec,
+    deployment: agentDeploymentSchema.parse({
+      ...current,
+      files: mergedFiles,
+    }),
   });
 }

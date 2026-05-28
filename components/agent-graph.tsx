@@ -17,9 +17,8 @@ import { BoardNode, type BoardNodeData } from "@/components/board/board-node";
 import { BoardToolbar } from "@/components/board/board-toolbar";
 import { HudPanel } from "@/components/hud/hud-panel";
 import {
-  agentSpecSchema,
-  defaultAgentSpec,
   isAgentSpecEmpty,
+  normalizeAgentSpec,
   type AgentSpec,
 } from "@/lib/agent-spec";
 import type { SwarmMemoryState } from "@/lib/swarm-memory";
@@ -326,10 +325,7 @@ function BoardCanvas({
   const prevMemoryStateRef = useRef<SwarmMemoryState | undefined>(undefined);
   const { fitView } = useReactFlow();
 
-  const validSpec = useMemo(() => {
-    const parsed = agentSpecSchema.safeParse(spec);
-    return parsed.success ? parsed.data : defaultAgentSpec;
-  }, [spec]);
+  const validSpec = useMemo(() => normalizeAgentSpec(spec), [spec]);
 
   const isEmpty = isAgentSpecEmpty(validSpec);
 

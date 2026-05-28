@@ -6,6 +6,7 @@ import {
   FileJson,
   FileText,
   Loader2,
+  Palette,
   Play,
   Rocket,
   Save,
@@ -13,13 +14,20 @@ import {
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DeploymentCodePanel } from "@/components/design/deployment-code-panel";
+import { StyleConfigPanel } from "@/components/design/style-config-panel";
 import { HudError } from "@/components/hud/hud-error";
 import { HudPanel } from "@/components/hud/hud-panel";
 import { SegmentedProgress } from "@/components/hud/segmented-progress";
 import { MemoryPanel } from "@/components/memory-panel";
 import { downloadAgentBundle } from "@/lib/export";
 import { isAgentPreviewReady } from "@/lib/agent-prompt";
-import { isAgentSpecEmpty, type AgentSpec } from "@/lib/agent-spec";
+import {
+  defaultAgentSpec,
+  isAgentSpecEmpty,
+  normalizeAgentSpec,
+  type AgentSpec,
+} from "@/lib/agent-spec";
 import {
   NEED_LABELS,
   needIsSecret,
@@ -28,6 +36,7 @@ import {
   type RuntimeNeed,
   type SlotInput,
 } from "@/lib/connectors";
+import { resolveAgentUi } from "@/lib/agent-ui";
 import { cn } from "@/lib/utils";
 import type { SwarmMemoryState } from "@/lib/swarm-memory";
 
@@ -39,6 +48,8 @@ interface ActionsPanelProps {
   statusLabel?: string;
   isBuilding?: boolean;
   onPreview?: () => void;
+  onDesign?: () => void;
+  onSpecUpdate?: (spec: AgentSpec) => void;
   memoryState?: SwarmMemoryState;
   lastWrittenBy?: Record<string, string>;
   latestWrittenKeys?: Set<string>;
@@ -78,6 +89,8 @@ export function ActionsPanel({
   statusLabel = "AWAITING INPUT",
   isBuilding = false,
   onPreview,
+  onDesign,
+  onSpecUpdate,
   memoryState = {},
   lastWrittenBy = {},
   latestWrittenKeys,
@@ -88,6 +101,7 @@ export function ActionsPanel({
   const [saveStatus, setSaveStatus] = useState<"idle" | "saved" | "error">("idle");
   const canExport = !isAgentSpecEmpty(agentSpec);
   const canPreview = isAgentPreviewReady(agentSpec);
+  const ui = resolveAgentUi(agentSpec.ui);
 
   async function handleSave() {
     setIsSaving(true);
@@ -158,7 +172,7 @@ export function ActionsPanel({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          spec: agentSpec,
+          spec: normalizeAgentSpec(agentSpec, defaultAgentSpec),
           runtime: {
             slots: slotInputs,
             searchApiKey: searchKey.trim() || undefined,
@@ -167,7 +181,13 @@ export function ActionsPanel({
       });
       if (!resp.ok || !resp.body) {
         const msg = await resp.json().catch(() => ({}));
-        throw new Error(msg.error || `Deploy failed (${resp.status}).`);
+        const detail =
+          typeof msg.error === "string"
+            ? msg.error
+            : resp.status === 500
+              ? "Deploy failed on the server. Restart the dev server and try again."
+              : `Deploy failed (${resp.status}).`;
+        throw new Error(detail);
       }
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
@@ -261,10 +281,11 @@ export function ActionsPanel({
                   : ""
               }
             />
+            <SpecRow label="Template" value={ui.template} />
+            <SpecRow label="Platform" value={agentSpec.deployment?.platform ?? "html"} />
           </div>
         </div>
 
-        {/* Shared Memory */}
         {agentSpec.swarmMemory && agentSpec.swarmMemory.length > 0 && (
           <MemoryPanel
             keys={agentSpec.swarmMemory}
@@ -272,6 +293,31 @@ export function ActionsPanel({
             lastWrittenBy={lastWrittenBy}
             latestWrittenKeys={latestWrittenKeys}
           />
+        )}
+
+        {onSpecUpdate && (
+          <div className="rounded-xl border border-white/[0.06] bg-gradient-to-b from-white/[0.03] to-transparent p-3.5">
+            <SectionHeader>Design & deployment</SectionHeader>
+            <p className="mb-3 text-[11.5px] leading-relaxed text-muted-foreground">
+              Configure how your agent looks when deployed and choose a code
+              platform.
+            </p>
+            <StyleConfigPanel agentSpec={agentSpec} onSpecUpdate={onSpecUpdate} />
+            <div className="mt-4 border-t border-white/[0.05] pt-4">
+              <DeploymentCodePanel
+                agentSpec={agentSpec}
+                onSpecUpdate={onSpecUpdate}
+              />
+            </div>
+            <Button
+              className="lift mt-3 h-9 w-full gap-2 border border-system/30 bg-system/10 text-system hover:bg-system/15"
+              variant="outline"
+              onClick={onDesign}
+            >
+              <Palette className="size-3.5" />
+              Open design preview
+            </Button>
+          </div>
         )}
 
         {/* Preview */}
@@ -336,7 +382,7 @@ export function ActionsPanel({
             {[
               { ext: "json", icon: FileJson },
               { ext: "md", icon: FileText },
-              { ext: "md", icon: FileText },
+              { ext: "html/ts/py", icon: FileText },
             ].map((f, i) => (
               <span
                 key={i}

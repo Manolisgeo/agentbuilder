@@ -2,13 +2,12 @@ import {
   convertToModelMessages,
   createUIMessageStream,
   createUIMessageStreamResponse,
-  stepCountIs,
   streamText,
 } from "ai";
 import { createChatTools } from "@/lib/chat-tools";
 import {
-  agentSpecSchema,
   defaultAgentSpec,
+  normalizeAgentSpec,
   type AgentSpec,
 } from "@/lib/agent-spec";
 import type { BuildPhase } from "@/lib/build-phase";
@@ -31,15 +30,15 @@ export async function POST(req: Request) {
     const messages: SwarmUIMessage[] = body.messages ?? [];
     const buildPhase: BuildPhase =
       body.buildPhase === "building" ? "building" : "discovery";
-    const parsedSpec = agentSpecSchema.safeParse(body.agentSpec);
-    let currentSpec: AgentSpec = parsedSpec.success
-      ? parsedSpec.data
-      : defaultAgentSpec;
+    const parsedSpec = normalizeAgentSpec(body.agentSpec, defaultAgentSpec);
+    let currentSpec: AgentSpec = parsedSpec;
 
-    const modelMessages = await convertToModelMessages(messages);
+    const modelMessages = await convertToModelMessages(messages, {
+      ignoreIncompleteToolCalls: true,
+    });
 
     const stream = createUIMessageStream<SwarmUIMessage>({
-      execute: ({ writer }) => {
+      execute: async ({ writer }) => {
         const getSpec = () => currentSpec;
         const setSpec = (spec: AgentSpec) => {
           currentSpec = spec;
@@ -58,12 +57,10 @@ export async function POST(req: Request) {
           messages: modelMessages,
           tools,
           stopWhen: ({ steps }) => {
-            // Stop immediately after clarifyUser so the agent can't chain
-            // another tool call or overwrite the block before the user answers.
             const clarifyFired = steps.some((s) =>
               s.toolCalls.some((tc) => tc.toolName === "clarifyUser")
             );
-            return clarifyFired || steps.length >= 20;
+            return clarifyFired || steps.length >= 30;
           },
           onFinish: () => {
             if (buildPhase === "building") {

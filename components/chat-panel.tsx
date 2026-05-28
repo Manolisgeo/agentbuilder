@@ -10,7 +10,7 @@ import {
   Newspaper,
   Search,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChatComposer } from "@/components/chat/chat-composer";
 import { ChatMessage } from "@/components/chat/chat-message";
 import { ClarifyModal } from "@/components/clarify-modal";
@@ -22,6 +22,7 @@ import type { AgentSpec } from "@/lib/agent-spec";
 import type { BuildPhase } from "@/lib/build-phase";
 import { buildAnswerMessage, type ClarifyAnswer, type ClarifyBlock } from "@/lib/clarify-types";
 import type { PlanStepStatus, SwarmUIMessage } from "@/lib/chat-types";
+import { getChatMessageKey, isMissingToolResultError, sanitizeChatMessages } from "@/lib/chat-messages";
 
 interface ChatPanelProps {
   agentSpec: AgentSpec;
@@ -86,12 +87,12 @@ export function ChatPanel({
   agentSpecRef.current = agentSpec;
   buildPhaseRef.current = buildPhase;
 
-  const { messages, sendMessage, status, error, stop } = useChat<SwarmUIMessage>({
+  const { messages, sendMessage, status, error, stop, setMessages } = useChat<SwarmUIMessage>({
     transport: new DefaultChatTransport({
       api: "/api/chat",
       prepareSendMessagesRequest: ({ messages, id }) => ({
         body: {
-          messages,
+          messages: sanitizeChatMessages(messages),
           id,
           agentSpec: agentSpecRef.current,
           buildPhase: buildPhaseRef.current,
@@ -117,13 +118,25 @@ export function ChatPanel({
       }
     },
     onError: (err) => {
+      if (isMissingToolResultError(err.message)) {
+        setMessages((current) => sanitizeChatMessages(current));
+      }
       onError(err.message);
     },
   });
 
+  useEffect(() => {
+    if (!error || !isMissingToolResultError(error.message)) return;
+    setMessages((current) => sanitizeChatMessages(current));
+  }, [error, setMessages]);
+
   const isBusy = status === "submitted" || status === "streaming";
   const isDiscovery = buildPhase === "discovery";
-  const lastMessage = messages.at(-1);
+  const displayMessages = useMemo(
+    () => sanitizeChatMessages(messages),
+    [messages]
+  );
+  const lastMessage = displayMessages.at(-1);
   const streamingAssistantId =
     isBusy && lastMessage?.role === "assistant" ? lastMessage.id : null;
 
@@ -144,7 +157,7 @@ export function ChatPanel({
       scrollContainer.scrollTop -
       scrollContainer.clientHeight;
     const shouldAutoScroll =
-      messages.length <= 1 || distanceFromBottom < 120;
+      displayMessages.length <= 1 || distanceFromBottom < 120;
 
     if (shouldAutoScroll) {
       scrollContainer.scrollTo({
@@ -152,7 +165,7 @@ export function ChatPanel({
         behavior: "smooth",
       });
     }
-  }, [messages, isBusy]);
+  }, [displayMessages, isBusy]);
 
   const clarifyPending = clarifyBlock !== null && !clarifySubmitted && !isBusy;
 
@@ -272,9 +285,9 @@ export function ChatPanel({
             </div>
           )}
 
-          {messages.map((message) => (
+          {displayMessages.map((message, index) => (
             <ChatMessage
-              key={message.id}
+              key={getChatMessageKey(message, index)}
               message={message}
               isStreaming={message.id === streamingAssistantId}
               planStepOverrides={planStepOverrides}

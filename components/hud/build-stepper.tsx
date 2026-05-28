@@ -7,6 +7,7 @@ const STEPS: { key: BuildStage; label: string }[] = [
   { key: "persona", label: "Persona" },
   { key: "tools", label: "Tools" },
   { key: "instructions", label: "Instructions" },
+  { key: "design", label: "Design" },
 ];
 
 interface BuildStepperProps {

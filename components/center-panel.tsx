@@ -1,15 +1,16 @@
 "use client";
 
-import { LayoutGrid, Play } from "lucide-react";
+import { LayoutGrid, Palette, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AgentGraph } from "@/components/agent-graph";
+import { DesignPreviewPanel } from "@/components/design/design-preview-panel";
 import { PreviewPanel } from "@/components/preview/preview-panel";
 import { isAgentPreviewReady } from "@/lib/agent-prompt";
 import type { AgentSpec } from "@/lib/agent-spec";
 import type { BuildPhase } from "@/lib/build-phase";
 import type { MemoryWriteEvent, SwarmMemoryState } from "@/lib/swarm-memory";
 
-export type CenterView = "canvas" | "preview";
+export type CenterView = "canvas" | "preview" | "design";
 
 interface CenterPanelProps {
   view: CenterView;
@@ -22,6 +23,17 @@ interface CenterPanelProps {
   onMemoryUpdate?: (event: MemoryWriteEvent) => void;
 }
 
+const VIEW_OPTIONS: {
+  id: CenterView;
+  label: string;
+  icon: typeof LayoutGrid;
+  requiresReady?: boolean;
+}[] = [
+  { id: "canvas", label: "Canvas", icon: LayoutGrid },
+  { id: "preview", label: "Preview", icon: Play, requiresReady: true },
+  { id: "design", label: "Design", icon: Palette },
+];
+
 export function CenterPanel({
   view,
   onViewChange,
@@ -33,53 +45,64 @@ export function CenterPanel({
   onMemoryUpdate,
 }: CenterPanelProps) {
   const canPreview = isAgentPreviewReady(agentSpec);
+  const activeIndex = VIEW_OPTIONS.findIndex((option) => option.id === view);
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
       <div className="relative flex shrink-0 items-center gap-1 rounded-full border border-white/[0.06] bg-white/[0.02] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-md">
-        {/* Sliding active background */}
         <div
-          className={cn(
-            "absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-full transition-all duration-300 ease-out",
-            view === "canvas"
-              ? "left-1 bg-gradient-to-br from-white/[0.07] to-white/[0.02] shadow-[0_2px_8px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.06)]"
-              : "left-[calc(50%+0px)] bg-gradient-to-br from-violet/15 to-violet/[0.04] shadow-[0_2px_12px_-2px_rgba(139,92,246,0.4),inset_0_1px_0_rgba(255,255,255,0.06)]"
-          )}
+          className="absolute top-1 bottom-1 rounded-full transition-all duration-300 ease-out"
+          style={{
+            width: `calc(${100 / VIEW_OPTIONS.length}% - 4px)`,
+            left: `calc(${(activeIndex * 100) / VIEW_OPTIONS.length}% + 2px)`,
+            background:
+              view === "design"
+                ? "linear-gradient(to bottom right, rgba(34,211,238,0.15), rgba(34,211,238,0.04))"
+                : view === "preview"
+                  ? "linear-gradient(to bottom right, rgba(139,92,246,0.15), rgba(139,92,246,0.04))"
+                  : "linear-gradient(to bottom right, rgba(255,255,255,0.07), rgba(255,255,255,0.02))",
+            boxShadow:
+              view === "design"
+                ? "0 2px 12px -2px rgba(34,211,238,0.35), inset 0 1px 0 rgba(255,255,255,0.06)"
+                : view === "preview"
+                  ? "0 2px 12px -2px rgba(139,92,246,0.4), inset 0 1px 0 rgba(255,255,255,0.06)"
+                  : "0 2px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.06)",
+          }}
         />
 
-        <button
-          type="button"
-          onClick={() => onViewChange("canvas")}
-          className={cn(
-            "relative z-10 flex flex-1 items-center justify-center gap-2 rounded-full px-3 py-2 text-[12px] font-medium transition-colors",
-            view === "canvas"
-              ? "text-foreground"
-              : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          <LayoutGrid className="size-3.5" />
-          Canvas
-        </button>
-        <button
-          type="button"
-          onClick={() => canPreview && onViewChange("preview")}
-          disabled={!canPreview}
-          title={
-            canPreview
-              ? "Preview your agent"
-              : "Complete name, role, and instructions to preview"
-          }
-          className={cn(
-            "relative z-10 flex flex-1 items-center justify-center gap-2 rounded-full px-3 py-2 text-[12px] font-medium transition-colors",
-            view === "preview"
-              ? "text-violet-200"
-              : "text-muted-foreground hover:text-foreground",
-            !canPreview && "cursor-not-allowed opacity-40"
-          )}
-        >
-          <Play className="size-3.5" />
-          Preview
-        </button>
+        {VIEW_OPTIONS.map((option) => {
+          const disabled = option.requiresReady && !canPreview;
+          const isActive = view === option.id;
+          const Icon = option.icon;
+
+          return (
+            <button
+              key={option.id}
+              type="button"
+              onClick={() => !disabled && onViewChange(option.id)}
+              disabled={disabled}
+              title={
+                disabled
+                  ? "Complete name, role, and instructions to preview"
+                  : option.label
+              }
+              className={cn(
+                "relative z-10 flex flex-1 items-center justify-center gap-2 rounded-full px-2 py-2 text-[12px] font-medium transition-colors",
+                isActive
+                  ? option.id === "design"
+                    ? "text-system"
+                    : option.id === "preview"
+                      ? "text-violet-200"
+                      : "text-foreground"
+                  : "text-muted-foreground hover:text-foreground",
+                disabled && "cursor-not-allowed opacity-40"
+              )}
+            >
+              <Icon className="size-3.5" />
+              {option.label}
+            </button>
+          );
+        })}
       </div>
 
       <div className="min-h-0 flex-1">
@@ -91,6 +114,8 @@ export function CenterPanel({
             buildPhase={buildPhase}
             memoryState={memoryState}
           />
+        ) : view === "design" ? (
+          <DesignPreviewPanel agentSpec={agentSpec} />
         ) : (
           <PreviewPanel
             key={JSON.stringify(agentSpec)}
