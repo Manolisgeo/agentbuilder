@@ -109,7 +109,10 @@ export function ChatPanel({
         }));
       }
       if (dataPart.type === "data-clarify") {
-        setClarifyBlock(dataPart.data as unknown as ClarifyBlock);
+        // Only accept the first block per turn — never overwrite an unanswered one.
+        setClarifyBlock((current) =>
+          current === null ? (dataPart.data as unknown as ClarifyBlock) : current
+        );
         setClarifySubmitted(false);
       }
     },

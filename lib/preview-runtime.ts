@@ -12,6 +12,7 @@ import {
   buildAgentRuntimePrompt,
   buildOrchestratorRuntimePrompt,
   buildSubAgentRuntimePrompt,
+  hasGmailTools,
   hasWebSearchTool,
 } from "@/lib/agent-prompt";
 import type { AgentSpec, SwarmAgent } from "@/lib/agent-spec";
@@ -28,6 +29,12 @@ import {
   webSearch,
   WebSearchError,
 } from "@/lib/web-search";
+import { readTokens, writeTokens } from "@/lib/gmail-tokens";
+import { createOAuthClient } from "@/lib/gmail-oauth";
+import {
+  createGmailReadInboxTool,
+  createGmailSendDigestTool,
+} from "@/lib/gmail-tools";
 
 type PreviewWriter = UIMessageStreamWriter<PreviewUIMessage>;
 
@@ -134,18 +141,59 @@ function createWebSearchTool() {
   };
 }
 
+async function createGmailTools(spec: AgentSpec) {
+  const tokens = await readTokens();
+  if (!tokens) return null;
+
+  const oauth2Client = await createOAuthClient();
+  oauth2Client.setCredentials(tokens);
+  oauth2Client.on("tokens", async (refreshed) => {
+    await writeTokens({
+      access_token: refreshed.access_token ?? tokens.access_token,
+      refresh_token: refreshed.refresh_token ?? tokens.refresh_token,
+      expiry_date: refreshed.expiry_date ?? tokens.expiry_date,
+    });
+  });
+
+  const tools: Record<string, unknown> = {};
+  if (spec.tools.some((t) => t.type === "gmail_read_inbox")) {
+    tools.gmail_read_inbox = createGmailReadInboxTool(oauth2Client);
+  }
+  if (spec.tools.some((t) => t.type === "gmail_send_digest")) {
+    tools.gmail_send_digest = createGmailSendDigestTool(oauth2Client);
+  }
+  return tools;
+}
+
 async function runSingleAgentPreview(
   spec: AgentSpec,
   modelMessages: ModelMessage[],
   writer: PreviewWriter
 ) {
-  const tools = hasWebSearchTool(spec) ? createWebSearchTool() : undefined;
+  const webTools = hasWebSearchTool(spec) ? createWebSearchTool() : undefined;
+
+  let gmailTools: Record<string, unknown> | undefined;
+  if (hasGmailTools(spec)) {
+    const built = await createGmailTools(spec);
+    if (!built) {
+      writer.write({
+        type: "data-gmailAuthRequired",
+        id: "gmail-auth",
+        data: { redirectUrl: "/api/auth/google" },
+      });
+      return;
+    }
+    gmailTools = built;
+  }
+
+  const tools = { ...webTools, ...gmailTools } as Record<string, unknown>;
+  const hasTools = Object.keys(tools).length > 0;
 
   const result = streamText({
     model: deepseekChat,
-    system: buildAgentRuntimePrompt(spec, { liveTools: Boolean(tools) }),
+    system: buildAgentRuntimePrompt(spec, { liveTools: hasTools }),
     messages: modelMessages,
-    tools,
+    tools: hasTools ? (tools as Parameters<typeof streamText>[0]["tools"]) : undefined,
     stopWhen: stepCountIs(5),
   });
 

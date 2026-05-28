@@ -57,7 +57,14 @@ export async function POST(req: Request) {
           system: buildOrchestratorPrompt(currentSpec, buildPhase),
           messages: modelMessages,
           tools,
-          stopWhen: stepCountIs(20),
+          stopWhen: ({ steps }) => {
+            // Stop immediately after clarifyUser so the agent can't chain
+            // another tool call or overwrite the block before the user answers.
+            const clarifyFired = steps.some((s) =>
+              s.toolCalls.some((tc) => tc.toolName === "clarifyUser")
+            );
+            return clarifyFired || steps.length >= 20;
+          },
           onFinish: () => {
             if (buildPhase === "building") {
               writer.write({

@@ -44,5 +44,6 @@ export type PreviewUIMessage = UIMessage<
   {
     orchestration: OrchestrationState;
     memoryState: MemoryWriteEvent;
+    gmailAuthRequired: { redirectUrl: string };
   }
 >;

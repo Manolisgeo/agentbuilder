@@ -67,6 +67,9 @@ export function PreviewPanel({ agentSpec, onMemoryUpdate }: PreviewPanelProps) {
         if (dataPart.type === "data-memoryState") {
           onMemoryUpdateRef.current?.(dataPart.data);
         }
+        if (dataPart.type === "data-gmailAuthRequired") {
+          window.location.href = dataPart.data.redirectUrl;
+        }
       },
     });
 

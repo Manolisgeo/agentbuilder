@@ -14,6 +14,12 @@ export function hasWebSearchTool(spec: AgentSpec): boolean {
   return spec.tools.some((tool) => tool.type === "web_search");
 }
 
+export function hasGmailTools(spec: AgentSpec): boolean {
+  return spec.tools.some(
+    (t) => t.type === "gmail_read_inbox" || t.type === "gmail_send_digest"
+  );
+}
+
 export function buildAgentRuntimePrompt(
   spec: AgentSpec,
   options: RuntimePromptOptions = {}
@@ -27,7 +33,13 @@ export function buildAgentRuntimePrompt(
       .map((tool) => `- ${tool.name} (${tool.type.replace(/_/g, " ")})`)
       .join("\n");
 
-    if (liveTools && hasSearch) {
+    const hasGmail = hasGmailTools(spec);
+
+    if (liveTools && hasSearch && hasGmail) {
+      toolsSection = `\n\n## Live capabilities\n${capabilityLines}\n\nYou have live access to \`web_search\`, \`gmail_read_inbox\`, and \`gmail_send_digest\`. Use \`gmail_read_inbox\` to fetch real unread emails, classify and summarize them, then call \`gmail_send_digest\` to send the HTML digest. Call \`web_search\` for real-time context when needed.`;
+    } else if (liveTools && hasGmail) {
+      toolsSection = `\n\n## Live capabilities\n${capabilityLines}\n\nYou have live access to \`gmail_read_inbox\` and \`gmail_send_digest\`. Use \`gmail_read_inbox\` to fetch real unread emails from the last hour, classify each by priority, summarize them, then call \`gmail_send_digest\` with an HTML digest email. If there are no unread emails, send a brief "all caught up" confirmation.`;
+    } else if (liveTools && hasSearch) {
       toolsSection = `\n\n## Live capabilities\n${capabilityLines}\n\nYou have access to the \`web_search\` tool for real-time information. Call it when the user asks about current events, recent news, live data, or anything that requires up-to-date web results. After searching, synthesize a clear answer and cite sources by title when relevant.`;
     } else if (hasSearch && swarmMode) {
       toolsSection = `\n\n## Capabilities\n${capabilityLines}\n\nWeb search may already have been run by a sub-agent — use any provided search context in your final answer and cite sources naturally.`;

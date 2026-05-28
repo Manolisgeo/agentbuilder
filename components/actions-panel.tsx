@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, FileJson, FileText, Loader2, Play } from "lucide-react";
+import { Download, FileJson, FileText, Loader2, Play, Save } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { HudError } from "@/components/hud/hud-error";
@@ -66,8 +66,28 @@ export function ActionsPanel({
 }: ActionsPanelProps) {
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saved" | "error">("idle");
   const canExport = !isAgentSpecEmpty(agentSpec);
   const canPreview = isAgentPreviewReady(agentSpec);
+
+  async function handleSave() {
+    setIsSaving(true);
+    setSaveStatus("idle");
+    try {
+      const res = await fetch("/api/save-agent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(agentSpec),
+      });
+      setSaveStatus(res.ok ? "saved" : "error");
+    } catch {
+      setSaveStatus("error");
+    } finally {
+      setIsSaving(false);
+      setTimeout(() => setSaveStatus("idle"), 3000);
+    }
+  }
 
   async function handleExport() {
     setIsExporting(true);
@@ -175,6 +195,35 @@ export function ActionsPanel({
               Needs name · role · instructions
             </p>
           )}
+        </div>
+
+        {/* Save agent */}
+        <div className="rounded-xl border border-white/[0.06] bg-gradient-to-b from-white/[0.03] to-transparent p-3.5">
+          <SectionHeader>Save agent</SectionHeader>
+          <p className="mb-3 text-[11.5px] leading-relaxed text-muted-foreground">
+            Persist spec to disk for the local scheduler and OAuth flow.
+          </p>
+          <Button
+            variant="outline"
+            className={cn(
+              "lift h-9 w-full gap-2 border-white/[0.08] bg-white/[0.02] transition-all",
+              saveStatus === "saved" && "border-emerald-500/40 text-emerald-400",
+              saveStatus === "error" && "border-red-500/40 text-red-400",
+              saveStatus === "idle" && "hover:border-primary/35 hover:bg-primary/[0.06] hover:text-primary"
+            )}
+            onClick={handleSave}
+            disabled={!canExport || isSaving}
+          >
+            {isSaving ? (
+              <><Loader2 className="size-3.5 animate-spin" />Saving</>
+            ) : saveStatus === "saved" ? (
+              <><Save className="size-3.5" />Saved</>
+            ) : saveStatus === "error" ? (
+              <><Save className="size-3.5" />Save failed</>
+            ) : (
+              <><Save className="size-3.5" />Save agent</>
+            )}
+          </Button>
         </div>
 
         {/* Export */}
