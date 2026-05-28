@@ -1,0 +1,21 @@
+fetch and pull and rebase from main with our changes and upstream changes
+
+---
+
+fetch and pull and rebase from main with our changes and upstream changes
+
+---
+
+any conflicts?
+
+---
+
+any conflicts?
+
+---
+
+merge and push
+
+---
+
+merge and push
