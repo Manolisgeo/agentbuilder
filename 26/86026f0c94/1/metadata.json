@@ -1,0 +1,118 @@
+{
+  "cli_version": "0.6.3",
+  "checkpoint_id": "2686026f0c94",
+  "session_id": "c85a9f78-046f-431a-a697-dc4e33869a68",
+  "strategy": "manual-commit",
+  "created_at": "2026-05-28T11:37:16.996316Z",
+  "branch": "main",
+  "checkpoints_count": 8,
+  "files_touched": [
+    "app/api/chat/route.ts",
+    "app/api/deploy/route.ts",
+    "components/actions-panel.tsx",
+    "components/chat-panel.tsx",
+    "lib/agent-mutations.ts",
+    "lib/chat-tools.ts",
+    "lib/orchestrator-prompt.ts"
+  ],
+  "agent": "Cursor",
+  "model": "claude-sonnet-4-6",
+  "turn_id": "744923eb893a",
+  "session_metrics": {
+    "turn_count": 8
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-05-28T11:37:16.988699Z",
+    "agent_lines": 90,
+    "agent_removed": 18,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 89,
+    "total_committed": 90,
+    "total_lines_changed": 197,
+    "agent_percentage": 54.82233502538071,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 11524,
+      "user_lines_removed": 89,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".playwright-mcp/console-2026-05-28T08-59-05-012Z.log": 15,
+        ".playwright-mcp/console-2026-05-28T08-59-19-331Z.log": 37,
+        ".playwright-mcp/console-2026-05-28T09-09-41-492Z.log": 69,
+        ".playwright-mcp/console-2026-05-28T09-22-02-235Z.log": 10273,
+        ".playwright-mcp/page-2026-05-28T08-59-05-795Z.yml": 148,
+        ".playwright-mcp/page-2026-05-28T08-59-19-650Z.yml": 148,
+        ".playwright-mcp/page-2026-05-28T09-09-42-299Z.yml": 148,
+        ".playwright-mcp/page-2026-05-28T09-09-54-960Z.yml": 193,
+        ".playwright-mcp/page-2026-05-28T09-10-27-427Z.yml": 193,
+        ".playwright-mcp/page-2026-05-28T09-22-03-245Z.yml": 154,
+        "app/api/deploy/route.ts": 41,
+        "components/actions-panel.tsx": 14,
+        "lib/agent-mutations.ts": 9,
+        "lib/chat-tools.ts": 14,
+        "lib/orchestrator-prompt.ts": 68
+      },
+      "user_removed_per_file": {
+        "app/api/deploy/route.ts": 10,
+        "components/actions-panel.tsx": 66,
+        "lib/agent-mutations.ts": 1,
+        "lib/chat-tools.ts": 2,
+        "lib/orchestrator-prompt.ts": 10
+      }
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 11524,
+      "agent_lines_removed": 89
+    },
+    {
+      "checkpoint_number": 3,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 11524,
+      "agent_lines_removed": 89
+    },
+    {
+      "checkpoint_number": 4,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 11524,
+      "agent_lines_removed": 89
+    },
+    {
+      "checkpoint_number": 5,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 11524,
+      "agent_lines_removed": 89
+    },
+    {
+      "checkpoint_number": 6,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 11627,
+      "agent_lines_removed": 102
+    },
+    {
+      "checkpoint_number": 7,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 11627,
+      "agent_lines_removed": 102
+    },
+    {
+      "checkpoint_number": 8,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 11634,
+      "agent_lines_removed": 107
+    }
+  ]
+}
