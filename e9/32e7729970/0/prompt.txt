@@ -1,13 +1,3 @@
-looks like google api stuff got hard coded to every prompt for the agent and it asks for everything even stuff that doesnt requrie google api now
+<timestamp>Thursday, May 28, 2026, 1:55 PM (UTC+3)</timestamp>
 
----
-
-can you commit and push just these changes? there are other features still in progress that we dont want pushed. But first see if there would be conflicts and let me know
-
----
-
-can you commit and push just these changes? there are other features still in progress that we dont want pushed. But first see if there would be conflicts and let me know
-
----
-
-now pull all the collaborators stuff and our ui changes and this change and rebase
+yes i mean the unstaged modifications. They are for the dark mode and light mode right? merge these and push
