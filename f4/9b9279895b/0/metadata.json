@@ -1,0 +1,64 @@
+{
+  "cli_version": "0.6.3",
+  "checkpoint_id": "f49b9279895b",
+  "session_id": "1c4f9f0e-f586-4950-b8fc-5efd45b78c5b",
+  "strategy": "manual-commit",
+  "created_at": "2026-05-28T09:01:51.424997Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "docs/plans/shared-agent-memory.md"
+  ],
+  "agent": "Cursor",
+  "model": "claude-sonnet-4-6",
+  "turn_id": "bd12604ca0d5",
+  "session_metrics": {
+    "turn_count": 1
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-05-28T09:01:51.422586Z",
+    "agent_lines": 364,
+    "agent_removed": 0,
+    "human_added": 75,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 439,
+    "total_lines_changed": 480,
+    "agent_percentage": 75.83333333333333,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 3140,
+      "user_lines_removed": 31,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".cursor/hooks.json": 40,
+        "app/agents/page.tsx": 62,
+        "app/api/codegen/route.ts": 89,
+        "components/app-sidebar.tsx": 36,
+        "components/board/board-node.tsx": 48,
+        "components/clarify-card.tsx": 396,
+        "components/codegen-actions-panel.tsx": 193,
+        "components/codegen-chat-panel.tsx": 315,
+        "components/codegen-graph.tsx": 305,
+        "docs/plans/agent-clarify-questions.md": 433,
+        "docs/plans/agent-code-generator.md": 509,
+        "docs/plans/true-multi-agent-roadmap.md": 296,
+        "lib/chat-types.ts": 6,
+        "lib/clarify-types.ts": 32,
+        "lib/codegen-prompt.ts": 30,
+        "lib/codegen-types.ts": 49,
+        "package-lock.json": 299,
+        "package.json": 2
+      },
+      "user_removed_per_file": {
+        "components/app-sidebar.tsx": 26,
+        "components/board/board-node.tsx": 3,
+        "package-lock.json": 2
+      }
+    }
+  ]
+}

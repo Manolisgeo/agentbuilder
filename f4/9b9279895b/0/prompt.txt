@@ -1,0 +1,5 @@
+/plan write a plane to implement the shared memory part in detail of our roadmap /Users/jacob/Documents/Projects/buildingprep/agentsbuilder/docs/plans/true-multi-agent-roadmap.md
+
+---
+
+/plan write a plane to implement the shared memory part in detail of our roadmap /Users/jacob/Documents/Projects/buildingprep/agentsbuilder/docs/plans/true-multi-agent-roadmap.md
