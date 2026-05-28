@@ -1,0 +1,23 @@
+stop the agent form asking the question Where do you want this agent deployed?
+
+Where do you want this agent deployed?
+Self-hosted Python script (you run it locally)
+
+Web UI — I'll access it through a browser
+
+Not sure yet
+
+its deployed on the app service
+
+---
+
+stop the agent form asking the question Where do you want this agent deployed?
+
+Where do you want this agent deployed?
+Self-hosted Python script (you run it locally)
+
+Web UI — I'll access it through a browser
+
+Not sure yet
+
+its deployed on the app service
