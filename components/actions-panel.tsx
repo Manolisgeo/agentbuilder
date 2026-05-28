@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { DeploymentCodePanel } from "@/components/design/deployment-code-panel";
 import { StyleConfigPanel } from "@/components/design/style-config-panel";
 import { HudError } from "@/components/hud/hud-error";
@@ -29,14 +28,7 @@ import {
   normalizeAgentSpec,
   type AgentSpec,
 } from "@/lib/agent-spec";
-import {
-  NEED_LABELS,
-  needIsSecret,
-  planConnectors,
-  type ConnectorSlot,
-  type RuntimeNeed,
-  type SlotInput,
-} from "@/lib/connectors";
+import { planConnectors } from "@/lib/connectors";
 import { resolveAgentUi } from "@/lib/agent-ui";
 import { saveAgent, type StoredAgent } from "@/lib/agent-storage";
 import { cn } from "@/lib/utils";
@@ -132,13 +124,10 @@ export function ActionsPanel({
   }
 
   const plan = useMemo(() => planConnectors(agentSpec), [agentSpec]);
-  const hasWebSearch = plan.some((c) => c.type === "web_search");
   const [isDeploying, setIsDeploying] = useState(false);
   const [deployLogs, setDeployLogs] = useState<string[]>([]);
   const [deployedUrl, setDeployedUrl] = useState<string | null>(null);
   const [deployError, setDeployError] = useState<string | null>(null);
-  const [slotInputs, setSlotInputs] = useState<Record<string, SlotInput>>({});
-  const [searchKey, setSearchKey] = useState("");
   const [deployments, setDeployments] = useState<
     { name: string; url: string | null; status: string }[]
   >([]);
@@ -162,22 +151,6 @@ export function ActionsPanel({
       method: "DELETE",
     }).catch(() => undefined);
     refreshDeployments();
-  }
-
-  function slotValue(c: ConnectorSlot, need: RuntimeNeed): string {
-    const entered = slotInputs[c.slot]?.[need];
-    if (entered !== undefined) return entered;
-    if (need === "path") return c.path ?? "";
-    if (need === "glob") return c.glob ?? "";
-    if (need === "baseUrl") return c.baseUrl ?? "";
-    return "";
-  }
-
-  function setSlotField(slot: string, need: RuntimeNeed, value: string) {
-    setSlotInputs((prev) => ({
-      ...prev,
-      [slot]: { ...prev[slot], [need]: value },
-    }));
   }
 
   async function handleExport() {
@@ -205,13 +178,7 @@ export function ActionsPanel({
       const resp = await fetch("/api/deploy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          spec: normalizeAgentSpec(agentSpec, defaultAgentSpec),
-          runtime: {
-            slots: slotInputs,
-            searchApiKey: searchKey.trim() || undefined,
-          },
-        }),
+        body: JSON.stringify({ spec: normalizeAgentSpec(agentSpec, defaultAgentSpec) }),
       });
       if (!resp.ok || !resp.body) {
         const msg = await resp.json().catch(() => ({}));
@@ -460,38 +427,19 @@ export function ActionsPanel({
             Generate a runnable agent and launch it in a container.
           </p>
 
-          {(plan.some((c) => c.needs.length > 0) || hasWebSearch) && (
-            <div className="mb-3 space-y-3">
-              {plan
-                .filter((c) => c.needs.length > 0)
-                .map((c) => (
-                  <div key={c.slot} className="space-y-1.5">
-                    <p className="font-mono text-[9px] uppercase tracking-[0.16em] text-system">
-                      {c.name}
-                    </p>
-                    {c.needs.map((need) => (
-                      <Input
-                        key={need}
-                        type={needIsSecret(need) ? "password" : "text"}
-                        placeholder={NEED_LABELS[need]}
-                        value={slotValue(c, need)}
-                        onChange={(e) => setSlotField(c.slot, need, e.target.value)}
-                        disabled={isDeploying}
-                        className="h-8 border-white/[0.08] bg-white/[0.02] text-[12px]"
-                      />
-                    ))}
-                  </div>
+          {plan.length > 0 && (
+            <div className="mb-3 rounded-md border border-white/[0.06] bg-white/[0.02] px-2.5 py-2">
+              <p className="font-mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground/60">
+                Connector secrets read from&nbsp;
+                <span className="text-system">.env</span>
+              </p>
+              <div className="mt-1.5 space-y-0.5">
+                {plan.map((c) => (
+                  <p key={c.slot} className="font-mono text-[10px] text-foreground/60">
+                    · {c.name}
+                  </p>
                 ))}
-              {hasWebSearch && (
-                <Input
-                  type="password"
-                  placeholder="Web search API key (optional)"
-                  value={searchKey}
-                  onChange={(e) => setSearchKey(e.target.value)}
-                  disabled={isDeploying}
-                  className="h-8 border-white/[0.08] bg-white/[0.02] text-[12px]"
-                />
-              )}
+              </div>
             </div>
           )}
 

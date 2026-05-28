@@ -262,26 +262,38 @@ function buildingTools(
     },
     addTool: {
       description:
-        "Add or update a tool node connected to the persona. Use descriptive types like gmail_read_inbox, gmail_send_digest, slack_send, http_request, web_search, or custom.",
+        "Add or update a tool node connected to the persona. Use descriptive types: gmail_read_inbox, gmail_send_digest, slack_send, http_request, http_api, web_search, file_search, db_query, or custom. For http_request/http_api always supply baseUrl. For file_search supply path (and optionally glob). For db_query supply engine.",
       inputSchema: z.object({
         id: z.string(),
         name: z.string(),
         type: z.string().optional(),
+        baseUrl: z.string().optional().describe("Base URL for http_request / http_api tools"),
+        path: z.string().optional().describe("Absolute folder path for file_search tools"),
+        glob: z.string().optional().describe("File pattern for file_search, e.g. '**/*.pdf'"),
+        engine: z.enum(["postgres", "mysql", "sqlite"]).optional().describe("DB engine for db_query tools"),
       }),
       execute: async ({
         id,
         name,
         type = "web_search",
+        baseUrl,
+        path,
+        glob,
+        engine,
       }: {
         id: string;
         name: string;
         type?: string;
+        baseUrl?: string;
+        path?: string;
+        glob?: string;
+        engine?: "postgres" | "mysql" | "sqlite";
       }) =>
         runSpecMutation(
           writer,
           getSpec,
           setSpec,
-          (spec) => addTool(spec, { id, name, type }),
+          (spec) => addTool(spec, { id, name, type, baseUrl, path, glob, engine }),
           { nodeId: `tool-${id}`, name }
         ),
     },

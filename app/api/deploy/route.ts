@@ -90,6 +90,8 @@ export async function POST(req: Request) {
     }
 
     const spec: AgentSpec = parsed.data;
+    // Runtime inputs from the request body are still accepted for programmatic
+    // use, but spec.envVars and server env vars are the authoritative sources.
     const inputs: RuntimeInputs = body.runtime ?? {};
     const slug = agentSlug(spec.name);
     const plan = planConnectors(spec);
@@ -102,6 +104,7 @@ export async function POST(req: Request) {
         const log = (line: string) => emit({ type: "log", line });
 
         try {
+          // 0. Docker must be installed and the daemon running.
           const docker = await runStep(
             "docker",
             ["version", "--format", "{{.Server.Version}}"],
@@ -120,12 +123,14 @@ export async function POST(req: Request) {
             );
           }
 
+          // 1. Generate the project.
           log("Generating agent project…");
           const files = await generateAgentFiles(spec, plan);
           const outDir = path.join(process.cwd(), "deploy-output", slug);
           await writeFiles(outDir, files);
           log(`Wrote ${Object.keys(files).length} files to deploy-output/${slug}/`);
 
+          // 2. Build the image.
           const image = `agent-${slug}`;
           log(`Building image ${image} (first build installs deps; may take a minute)…`);
           const build = await runStep("docker", ["build", "-t", image, outDir], log);
@@ -133,11 +138,13 @@ export async function POST(req: Request) {
             throw new Error(`docker build failed (exit ${build.code}).`);
           }
 
+          // 3. Replace any previous container for this agent.
           const container = `agent-${slug}`;
           await runStep("docker", ["rm", "-f", container], () => {}).catch(
             () => undefined
           );
 
+          // 4. Assemble run args + runtime config (secrets via env, files via mounts).
           const port = await freePort();
           const args = ["run", "-d", "--name", container, "-p", `${port}:8080`];
           if (process.env.DEEPSEEK_API_KEY) {
@@ -149,34 +156,56 @@ export async function POST(req: Request) {
             searchApiKey?: string;
           } = {
             slots: {},
+            // Env var is the authoritative source; body input is a fallback.
             searchApiKey:
-              inputs.searchApiKey ||
               process.env.TAVILY_API_KEY ||
-              process.env.SEARCH_API_KEY,
+              process.env.SEARCH_API_KEY ||
+              inputs.searchApiKey,
           };
+
+          // spec.envVars holds secrets collected by the builder during the chat
+          // (via setEnvVar). They are the primary secret source — server env
+          // vars are a global fallback for advanced users.
+          const envVars = spec.envVars ?? {};
 
           let needsGmail = false;
           for (const c of plan) {
             const rt = inputs.slots?.[c.slot] ?? {};
             if (c.type === "file_search") {
-              const hostPath = rt.path || c.path;
+              // spec path (set by builder) > env fallback > body input
+              const hostPath = c.path || process.env.FILE_SEARCH_PATH || rt.path;
               if (hostPath) {
                 args.push("-v", `${path.resolve(hostPath)}:/data/${c.slot}:ro`);
               } else {
                 log(
-                  `WARNING: file_search tool "${c.name}" has no folder path — it will find nothing.`
+                  `WARNING: file_search tool "${c.name}" has no folder path — the agent will find nothing.`
                 );
               }
-              agentConfig.slots[c.slot] = { glob: rt.glob || c.glob };
-            } else if (c.type === "http_api" || c.type === "http_request") {
               agentConfig.slots[c.slot] = {
-                baseUrl: rt.baseUrl || c.baseUrl,
-                authHeader: rt.authHeader,
+                glob: c.glob || process.env.FILE_SEARCH_GLOB || rt.glob,
               };
+            } else if (c.type === "http_api" || c.type === "http_request") {
+              // baseUrl: spec tool > env fallback
+              // authHeader: spec envVars (set via setEnvVar during build) > env fallback
+              const baseUrl = c.baseUrl || process.env.HTTP_BASE_URL || rt.baseUrl;
+              const authHeader =
+                envVars.HTTP_AUTH_HEADER ||
+                process.env.HTTP_AUTH_HEADER ||
+                rt.authHeader;
+              agentConfig.slots[c.slot] = { baseUrl, authHeader };
+              if (baseUrl) log(`HTTP tool "${c.name}" → ${baseUrl}`);
             } else if (c.type === "db_query") {
-              agentConfig.slots[c.slot] = { dbUrl: rt.dbUrl };
+              const dbUrl =
+                envVars.DATABASE_URL ||
+                process.env.DATABASE_URL ||
+                rt.dbUrl;
+              agentConfig.slots[c.slot] = { dbUrl };
             } else if (c.type === "slack_send") {
-              agentConfig.slots[c.slot] = { webhookUrl: rt.webhookUrl };
+              const webhookUrl =
+                envVars.SLACK_WEBHOOK_URL ||
+                process.env.SLACK_WEBHOOK_URL ||
+                rt.webhookUrl;
+              agentConfig.slots[c.slot] = { webhookUrl };
             } else if (
               c.type === "gmail_read_inbox" ||
               c.type === "gmail_send_digest"
@@ -187,6 +216,8 @@ export async function POST(req: Request) {
 
           args.push("-e", `AGENT_CONFIG=${JSON.stringify(agentConfig)}`);
 
+          // Gmail tools reuse the OAuth tokens + Google credentials the builder
+          // already stored, injected as container env. Read them at deploy time.
           if (needsGmail) {
             const tokens = await readTokens().catch(() => null);
             const clientId =
