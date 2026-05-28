@@ -29,13 +29,16 @@ import {
   type RuntimeNeed,
   type SlotInput,
 } from "@/lib/connectors";
+import { saveAgent, type StoredAgent } from "@/lib/agent-storage";
 import { cn } from "@/lib/utils";
 import type { SwarmMemoryState } from "@/lib/swarm-memory";
 
 interface ActionsPanelProps {
   agentSpec: AgentSpec;
+  agentId?: string;
   errorMessage: string | null;
   onClearError: () => void;
+  onAgentSaved?: (agent: StoredAgent) => void;
   buildProgress?: number;
   statusLabel?: string;
   isBuilding?: boolean;
@@ -66,15 +69,17 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
     <div className="mb-2 flex items-center gap-2">
       <div className="size-1 rounded-full bg-primary/70" />
       <p className="hud-label">{children}</p>
-      <div className="h-px flex-1 bg-gradient-to-r from-white/[0.08] to-transparent" />
+      <div className="h-px flex-1 bg-gradient-to-r from-black/[0.07] to-transparent dark:from-white/[0.08]" />
     </div>
   );
 }
 
 export function ActionsPanel({
   agentSpec,
+  agentId,
   errorMessage,
   onClearError,
+  onAgentSaved,
   buildProgress = 0,
   statusLabel = "AWAITING INPUT",
   isBuilding = false,
@@ -94,12 +99,18 @@ export function ActionsPanel({
     setIsSaving(true);
     setSaveStatus("idle");
     try {
-      const res = await fetch("/api/save-agent", {
+      // Persist to localStorage library
+      const stored = saveAgent(agentSpec, agentId);
+      onAgentSaved?.(stored);
+
+      // Also write to disk for the local scheduler / OAuth flow
+      await fetch("/api/save-agent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(agentSpec),
       });
-      setSaveStatus(res.ok ? "saved" : "error");
+
+      setSaveStatus("saved");
     } catch {
       setSaveStatus("error");
     } finally {
@@ -235,7 +246,7 @@ export function ActionsPanel({
 
   return (
     <HudPanel tier={1} className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="flex items-center justify-between gap-3 border-b border-white/[0.05] px-4 py-3.5">
+      <div className="flex items-center justify-between gap-3 border-b border-black/[0.06] px-4 py-3.5 dark:border-white/[0.05]">
         <div className="flex items-center gap-2.5">
           <span className="relative flex size-1.5">
             <span className="absolute inset-0 animate-ping rounded-full bg-system/40" />
@@ -256,7 +267,7 @@ export function ActionsPanel({
         )}
 
         {/* Build progress */}
-        <div className="rounded-xl border border-white/[0.06] bg-gradient-to-b from-white/[0.03] to-transparent p-3.5">
+        <div className="inner-card p-3.5">
           <SegmentedProgress
             value={buildProgress}
             statusLabel={isBuilding ? "ASSEMBLING AGENT" : statusLabel}
@@ -264,9 +275,9 @@ export function ActionsPanel({
         </div>
 
         {/* Agent snapshot */}
-        <div className="rounded-xl border border-white/[0.06] bg-gradient-to-b from-white/[0.03] to-transparent p-3.5">
+        <div className="inner-card p-3.5">
           <SectionHeader>Agent snapshot</SectionHeader>
-          <div className="divide-y divide-white/[0.04]">
+          <div className="divide-y divide-black/[0.05] dark:divide-white/[0.04]">
             <SpecRow label="Name" value={agentSpec.name === "Untitled Agent" ? "" : agentSpec.name} />
             <SpecRow label="Role" value={agentSpec.persona.role} />
             <SpecRow label="Tone" value={agentSpec.persona.tone} />
@@ -301,7 +312,7 @@ export function ActionsPanel({
         )}
 
         {/* Preview */}
-        <div className="rounded-xl border border-white/[0.06] bg-gradient-to-b from-white/[0.03] to-transparent p-3.5">
+        <div className="inner-card p-3.5">
           <SectionHeader>Pre-deploy preview</SectionHeader>
           <p className="mb-3 text-[11.5px] leading-relaxed text-muted-foreground">
             Test your agent as an end user before exporting.
@@ -311,7 +322,7 @@ export function ActionsPanel({
               "lift h-9 w-full gap-2 transition-all",
               canPreview && !isBuilding
                 ? "bg-gradient-to-br from-violet-500 to-violet-600 text-white shadow-[0_4px_16px_-4px_rgba(139,92,246,0.6),inset_0_1px_0_rgba(255,255,255,0.2)] hover:shadow-[0_6px_22px_-4px_rgba(139,92,246,0.8),inset_0_1px_0_rgba(255,255,255,0.25)]"
-                : "bg-white/[0.04] text-muted-foreground"
+                : "bg-black/[0.04] text-muted-foreground dark:bg-white/[0.04]"
             )}
             onClick={onPreview}
             disabled={!canPreview || isBuilding}
@@ -327,7 +338,7 @@ export function ActionsPanel({
         </div>
 
         {/* Save agent */}
-        <div className="rounded-xl border border-white/[0.06] bg-gradient-to-b from-white/[0.03] to-transparent p-3.5">
+        <div className="inner-card p-3.5">
           <SectionHeader>Save agent</SectionHeader>
           <p className="mb-3 text-[11.5px] leading-relaxed text-muted-foreground">
             Persist spec to disk for the local scheduler and OAuth flow.
@@ -335,9 +346,9 @@ export function ActionsPanel({
           <Button
             variant="outline"
             className={cn(
-              "lift h-9 w-full gap-2 border-white/[0.08] bg-white/[0.02] transition-all",
-              saveStatus === "saved" && "border-emerald-500/40 text-emerald-400",
-              saveStatus === "error" && "border-red-500/40 text-red-400",
+              "lift h-9 w-full gap-2 border-black/[0.08] bg-transparent transition-all dark:border-white/[0.08] dark:bg-white/[0.02]",
+              saveStatus === "saved" && "border-emerald-500/40 text-emerald-600 dark:text-emerald-400",
+              saveStatus === "error" && "border-red-500/40 text-red-500 dark:text-red-400",
               saveStatus === "idle" && "hover:border-primary/35 hover:bg-primary/[0.06] hover:text-primary"
             )}
             onClick={handleSave}
@@ -356,7 +367,7 @@ export function ActionsPanel({
         </div>
 
         {/* Export */}
-        <div className="rounded-xl border border-white/[0.06] bg-gradient-to-b from-white/[0.03] to-transparent p-3.5">
+        <div className="inner-card p-3.5">
           <SectionHeader>Export bundle</SectionHeader>
           <div className="mb-3 flex flex-wrap gap-1.5">
             {[
@@ -366,7 +377,7 @@ export function ActionsPanel({
             ].map((f, i) => (
               <span
                 key={i}
-                className="inline-flex items-center gap-1 rounded-md border border-white/[0.07] bg-white/[0.02] px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-muted-foreground"
+                className="inline-flex items-center gap-1 rounded-md border border-black/[0.07] bg-black/[0.02] px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-muted-foreground dark:border-white/[0.07] dark:bg-white/[0.02]"
               >
                 <f.icon className="size-2.5" />
                 .{f.ext}
@@ -375,7 +386,7 @@ export function ActionsPanel({
           </div>
           <Button
             variant="outline"
-            className="lift h-9 w-full gap-2 border-white/[0.08] bg-white/[0.02] hover:border-primary/35 hover:bg-primary/[0.06] hover:text-primary"
+            className="lift h-9 w-full gap-2 border-black/[0.08] bg-transparent hover:border-primary/35 hover:bg-primary/[0.06] hover:text-primary dark:border-white/[0.08] dark:bg-white/[0.02]"
             onClick={handleExport}
             disabled={!canExport || isExporting}
           >
