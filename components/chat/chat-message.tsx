@@ -2,7 +2,9 @@
 
 import { Bot, User } from "lucide-react";
 import { getToolName, isToolUIPart, type UIMessage } from "ai";
-import { ToolCallDisplay } from "@/components/chat/tool-call-display";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { ToolCallDisplay, SpecUpdateGroup, SPEC_TOOLS } from "@/components/chat/tool-call-display";
 import type { PlanStepStatus } from "@/lib/chat-types";
 import { sanitizeAssistantChatText } from "@/lib/chat-display";
 import { cn } from "@/lib/utils";
@@ -15,42 +17,115 @@ interface ChatMessageProps {
   workingLabel?: string;
 }
 
-function formatText(text: string) {
-  const paragraphs = text.split(/\n{2,}/).filter(Boolean);
-
-  return paragraphs.map((paragraph, index) => {
-    const lines = paragraph.split("\n");
-    const isList = lines.every((line) => /^[-*•]\s/.test(line.trim()));
-
-    if (isList) {
+const mdComponents: React.ComponentProps<typeof ReactMarkdown>["components"] = {
+  p: ({ children }) => (
+    <p className="mb-2 text-[13.5px] leading-relaxed text-foreground/90 last:mb-0">
+      {children}
+    </p>
+  ),
+  h1: ({ children }) => (
+    <h1 className="mb-2 mt-4 text-[15px] font-semibold text-foreground first:mt-0">
+      {children}
+    </h1>
+  ),
+  h2: ({ children }) => (
+    <h2 className="mb-1.5 mt-3 text-[14px] font-semibold text-foreground first:mt-0">
+      {children}
+    </h2>
+  ),
+  h3: ({ children }) => (
+    <h3 className="mb-1 mt-2.5 text-[13.5px] font-semibold text-foreground first:mt-0">
+      {children}
+    </h3>
+  ),
+  ul: ({ children }) => (
+    <ul className="my-2 space-y-1 pl-1">{children}</ul>
+  ),
+  ol: ({ children }) => (
+    <ol className="my-2 space-y-1 pl-4 text-[13.5px] leading-relaxed text-foreground/90 [counter-reset:list-item]">
+      {children}
+    </ol>
+  ),
+  li: ({ children, ...props }) => {
+    // Inside <ol> react-markdown sets ordered=true on the li node
+    const isOrdered = (props as { ordered?: boolean }).ordered;
+    if (isOrdered) {
       return (
-        <ul key={index} className="my-2 space-y-1 pl-1">
-          {lines.map((line, lineIndex) => (
-            <li
-              key={lineIndex}
-              className="flex gap-2 text-[13.5px] leading-relaxed text-foreground/90"
-            >
-              <span className="mt-[7px] size-1 shrink-0 rounded-full bg-primary/70" />
-              <span>{line.replace(/^[-*•]\s*/, "")}</span>
-            </li>
-          ))}
-        </ul>
+        <li className="list-decimal text-[13.5px] leading-relaxed text-foreground/90 marker:text-primary/60">
+          {children}
+        </li>
       );
     }
-
     return (
-      <p
-        key={index}
-        className={cn(
-          "text-[13.5px] leading-relaxed text-foreground/90",
-          index > 0 && "mt-3"
-        )}
-      >
-        {paragraph}
-      </p>
+      <li className="flex gap-2 text-[13.5px] leading-relaxed text-foreground/90">
+        <span className="mt-[7px] size-1 shrink-0 rounded-full bg-primary/70" />
+        <span className="min-w-0">{children}</span>
+      </li>
     );
-  });
-}
+  },
+  strong: ({ children }) => (
+    <strong className="font-semibold text-foreground">{children}</strong>
+  ),
+  em: ({ children }) => (
+    <em className="italic text-foreground/80">{children}</em>
+  ),
+  code: ({ children, className }) => {
+    const isBlock = className?.includes("language-");
+    if (isBlock) {
+      return (
+        <code className="block w-full overflow-x-auto rounded-lg border border-black/[0.07] bg-black/[0.04] px-3 py-2.5 font-mono text-[12px] leading-relaxed text-foreground/85 dark:border-white/[0.07] dark:bg-white/[0.04]">
+          {children}
+        </code>
+      );
+    }
+    return (
+      <code className="rounded bg-black/[0.06] px-1.5 py-0.5 font-mono text-[12px] text-foreground/85 dark:bg-white/[0.07]">
+        {children}
+      </code>
+    );
+  },
+  pre: ({ children }) => (
+    <pre className="my-2.5 overflow-x-auto rounded-lg border border-black/[0.07] bg-black/[0.04] p-0 dark:border-white/[0.07] dark:bg-white/[0.04]">
+      {children}
+    </pre>
+  ),
+  blockquote: ({ children }) => (
+    <blockquote className="my-2 border-l-2 border-primary/40 pl-3 text-[13.5px] italic text-foreground/70">
+      {children}
+    </blockquote>
+  ),
+  a: ({ href, children }) => (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-primary underline underline-offset-2 hover:text-primary/80"
+    >
+      {children}
+    </a>
+  ),
+  hr: () => (
+    <hr className="my-3 border-black/[0.07] dark:border-white/[0.07]" />
+  ),
+  table: ({ children }) => (
+    <div className="my-2.5 overflow-x-auto rounded-lg border border-black/[0.07] dark:border-white/[0.07]">
+      <table className="w-full text-[12.5px]">{children}</table>
+    </div>
+  ),
+  thead: ({ children }) => (
+    <thead className="bg-black/[0.03] dark:bg-white/[0.03]">{children}</thead>
+  ),
+  th: ({ children }) => (
+    <th className="border-b border-black/[0.07] px-3 py-2 text-left font-semibold text-foreground/90 dark:border-white/[0.07]">
+      {children}
+    </th>
+  ),
+  td: ({ children }) => (
+    <td className="border-b border-black/[0.04] px-3 py-2 text-foreground/80 last:border-0 dark:border-white/[0.04]">
+      {children}
+    </td>
+  ),
+};
 
 export function ChatMessage({
   message,
@@ -66,12 +141,16 @@ export function ChatMessage({
     "clarifyUser", // shown as ClarifyCard
     "updatePlanStep", // reflected in plan card step status
     "readArchitecture", // internal read, no user-visible output
-    "updateAgentUi",
-    "updateDeploymentPlatform",
-    "updateDeploymentCode",
+    "renderDashboard", // shown as DashboardCard in PreviewPanel
   ]);
-  const toolParts = message.parts.filter(
+  const allToolParts = message.parts.filter(
     (part) => isToolUIPart(part) && !SILENT_TOOLS.has(getToolName(part))
+  );
+  const specToolParts = allToolParts.filter(
+    (part) => isToolUIPart(part) && SPEC_TOOLS.has(getToolName(part))
+  );
+  const toolParts = allToolParts.filter(
+    (part) => isToolUIPart(part) && !SPEC_TOOLS.has(getToolName(part))
   );
   const rawTextContent = textParts
     .map((part) => (part.type === "text" ? part.text : ""))
@@ -82,7 +161,7 @@ export function ChatMessage({
       ? sanitizeAssistantChatText(rawTextContent)
       : rawTextContent;
 
-  if (!textContent && toolParts.length === 0) return null;
+  if (!textContent && toolParts.length === 0 && specToolParts.length === 0) return null;
 
   return (
     <div className="group flex gap-3">
@@ -123,8 +202,23 @@ export function ChatMessage({
 
         <div className="text-foreground/90">
           {textContent && (
-            <div className="whitespace-pre-wrap">
-              {formatText(textContent)}
+            <div className="prose-none min-w-0">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={
+                  isUser
+                    ? {
+                        p: ({ children }) => (
+                          <p className="text-[13.5px] leading-relaxed text-foreground/90">
+                            {children}
+                          </p>
+                        ),
+                      }
+                    : mdComponents
+                }
+              >
+                {textContent}
+              </ReactMarkdown>
               {isStreaming && !isUser && (
                 <span
                   className="caret-blink ml-0.5 inline-block h-[14px] w-[2px] translate-y-0.5 bg-primary"
@@ -132,6 +226,20 @@ export function ChatMessage({
                 />
               )}
             </div>
+          )}
+
+          {specToolParts.length > 0 && (
+            <SpecUpdateGroup
+              parts={specToolParts
+                .filter(isToolUIPart)
+                .map((part) => ({
+                  toolName: getToolName(part),
+                  state: "state" in part ? String(part.state) : undefined,
+                  input: "input" in part ? part.input : undefined,
+                  output: part.state === "output-available" ? part.output : undefined,
+                }))}
+              isStreaming={isStreaming}
+            />
           )}
 
           {toolParts.map((part) => {

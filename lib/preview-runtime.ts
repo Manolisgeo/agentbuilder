@@ -22,7 +22,8 @@ import type {
   PreviewUIMessage,
   WebSearchResult,
 } from "@/lib/preview-types";
-import { deepseekChat } from "@/lib/deepseek";
+import { getChatModel } from "@/lib/deepseek";
+import { extractHtmlFromLlmOutput } from "@/lib/frontend-codegen";
 import {
   formatWebSearchForPrompt,
   isWebSearchConfigured,
@@ -35,8 +36,100 @@ import {
   createGmailReadInboxTool,
   createGmailSendDigestTool,
 } from "@/lib/gmail-tools";
+import type { ArticleData, ArticlesFeedData, DashboardData } from "@/lib/preview-types";
 
 type PreviewWriter = UIMessageStreamWriter<PreviewUIMessage>;
+
+const MAX_DASHBOARD_HTML_BYTES = 200_000;
+
+function createDashboardTool(writer: PreviewWriter) {
+  return {
+    renderDashboard: {
+      description:
+        "Render a rich HTML dashboard to the user. Call this after fetching data via other tools. Pass a complete, self-contained HTML document with inline <style> blocks. Do not use fetch() or XHR inside the HTML — all data must be baked in.",
+      inputSchema: z.object({
+        title: z.string().describe("Short heading shown above the dashboard card"),
+        html: z.string().describe(
+          "A complete HTML document (including <html>, <head>, <style>, <body>) to render in a sandboxed iframe"
+        ),
+      }),
+      execute: async ({ title, html }: { title: string; html: string }) => {
+        // Strip markdown fences the model may wrap around the HTML
+        const extracted = extractHtmlFromLlmOutput(html) ?? html.trim();
+        if (extracted.length > MAX_DASHBOARD_HTML_BYTES) {
+          return {
+            success: false,
+            error: `HTML exceeds ${MAX_DASHBOARD_HTML_BYTES / 1000} KB limit. Reduce content.`,
+          };
+        }
+        if (!extracted.startsWith("<")) {
+          return { success: false, error: "html must be a valid HTML string starting with '<'." };
+        }
+        const dashboard: DashboardData = {
+          id: crypto.randomUUID(),
+          title: title.trim() || "Dashboard",
+          html: extracted,
+        };
+        writer.write({
+          type: "data-dashboard",
+          id: `dashboard-${dashboard.id}`,
+          data: dashboard,
+        });
+        return { success: true };
+      },
+    },
+  };
+}
+
+const articleSchema = z.object({
+  title: z.string().describe("Headline of the article"),
+  summary: z.string().describe("2-4 sentence summary of the article"),
+  source: z.string().describe("Publication or outlet name, e.g. 'Reuters'"),
+  url: z.string().describe("Full URL to the article"),
+  imageUrl: z.string().optional().describe("Direct URL to a representative image (optional)"),
+  publishedAt: z.string().optional().describe("ISO 8601 or human-readable publish time, e.g. '2025-05-28T14:00:00Z'"),
+  category: z.string().optional().describe("Topic category, e.g. 'Politics', 'Tech', 'World'"),
+});
+
+function createArticlesTool(writer: PreviewWriter) {
+  return {
+    renderArticles: {
+      description:
+        "Render a rich news article feed with cards to the user. Call this instead of plain text when returning news stories, search results, or any list of articles. Pass structured article data — the UI will display them as interactive cards with summaries, sources, and links.",
+      inputSchema: z.object({
+        title: z.string().describe("Feed heading, e.g. 'Top Stories Today' or 'US Politics Briefing'"),
+        articles: z.array(articleSchema).min(1).max(20).describe("List of articles to display"),
+      }),
+      execute: async ({
+        title,
+        articles,
+      }: {
+        title: string;
+        articles: Array<{
+          title: string;
+          summary: string;
+          source: string;
+          url: string;
+          imageUrl?: string;
+          publishedAt?: string;
+          category?: string;
+        }>;
+      }) => {
+        const feed: ArticlesFeedData = {
+          id: crypto.randomUUID(),
+          title: title.trim() || "Latest Stories",
+          articles: articles.map((a): ArticleData => ({ id: crypto.randomUUID(), ...a })),
+        };
+        writer.write({
+          type: "data-articlesFeed",
+          id: `feed-${feed.id}`,
+          data: feed,
+        });
+        return { success: true, count: feed.articles.length };
+      },
+    },
+  };
+}
 
 const routingSchema = z.object({
   subAgentId: z
@@ -186,14 +279,15 @@ async function runSingleAgentPreview(
     gmailTools = built;
   }
 
-  const tools = { ...webTools, ...gmailTools } as Record<string, unknown>;
-  const hasTools = Object.keys(tools).length > 0;
+  const dashboardTool = createDashboardTool(writer);
+  const articlesTool = createArticlesTool(writer);
+  const tools = { ...webTools, ...gmailTools, ...dashboardTool, ...articlesTool } as Record<string, unknown>;
 
   const result = streamText({
-    model: deepseekChat,
-    system: buildAgentRuntimePrompt(spec, { liveTools: hasTools }),
+    model: getChatModel(),
+    system: buildAgentRuntimePrompt(spec, { liveTools: Object.keys({ ...webTools, ...gmailTools }).length > 0 }),
     messages: modelMessages,
-    tools: hasTools ? (tools as Parameters<typeof streamText>[0]["tools"]) : undefined,
+    tools: tools as Parameters<typeof streamText>[0]["tools"],
     stopWhen: stepCountIs(5),
   });
 
@@ -220,7 +314,7 @@ async function runSwarmPreview(
   });
 
   const routing = await generateObject({
-    model: deepseekChat,
+    model: getChatModel(),
     schema: routingSchema,
     system: buildOrchestratorRuntimePrompt(spec),
     prompt: `User message:\n${userText}\n\nChoose the best sub-agent to handle this, or respond directly if no delegation is needed. Set needsWebSearch true when fresh web data would materially improve the answer.`,
@@ -368,7 +462,7 @@ async function runSwarmPreview(
   );
 
   const result = streamText({
-    model: deepseekChat,
+    model: getChatModel(),
     system: buildAgentRuntimePrompt(spec, {
       liveTools: false,
       swarmMode: true,
@@ -399,7 +493,7 @@ async function runSubAgent(
     : "";
 
   const result = await generateText({
-    model: deepseekChat,
+    model: getChatModel(),
     system: buildSubAgentRuntimePrompt(subAgent),
     prompt: `End-user request:\n${userText}${context}\n\nProvide your specialist output for the orchestrator. Be thorough but concise.`,
   });

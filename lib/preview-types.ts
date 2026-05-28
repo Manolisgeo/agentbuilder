@@ -39,11 +39,36 @@ export type OrchestrationState = {
   steps: OrchestrationStep[];
 };
 
+export type DashboardData = {
+  id: string;
+  title: string;
+  html: string;
+};
+
+export type ArticleData = {
+  id: string;
+  title: string;
+  summary: string;
+  source: string;
+  url: string;
+  imageUrl?: string;
+  publishedAt?: string;
+  category?: string;
+};
+
+export type ArticlesFeedData = {
+  id: string;
+  title: string;
+  articles: ArticleData[];
+};
+
 export type PreviewUIMessage = UIMessage<
   never,
   {
     orchestration: OrchestrationState;
     memoryState: MemoryWriteEvent;
     gmailAuthRequired: { redirectUrl: string };
+    dashboard: DashboardData;
+    articlesFeed: ArticlesFeedData;
   }
 >;

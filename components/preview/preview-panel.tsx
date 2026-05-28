@@ -5,6 +5,8 @@ import { DefaultChatTransport } from "ai";
 import { Play, RotateCcw, Zap } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AgentFrontendFrame } from "@/components/design/agent-frontend-frame";
+import { ArticlesFeed } from "@/components/preview/articles-feed";
+import { DashboardCard } from "@/components/preview/dashboard-card";
 import { SwarmOrchestrationTimeline } from "@/components/preview/swarm-orchestration-timeline";
 import { Button } from "@/components/ui/button";
 import { HudError } from "@/components/hud/hud-error";
@@ -15,6 +17,8 @@ import { hasWebSearchTool } from "@/lib/agent-prompt";
 import type { AgentSpec } from "@/lib/agent-spec";
 import { dedupeMessagesById } from "@/lib/chat-messages";
 import type {
+  ArticlesFeedData,
+  DashboardData,
   OrchestrationStep,
   PreviewUIMessage,
 } from "@/lib/preview-types";
@@ -40,9 +44,9 @@ export function PreviewPanel({
 }: PreviewPanelProps) {
   const frontendHtml = useAgentFrontendHtml(agentSpec);
   const displayHtml = useDeferredHtml(frontendHtml, isActive);
-  const [orchestrationSteps, setOrchestrationSteps] = useState<
-    OrchestrationStep[]
-  >([]);
+  const [orchestrationSteps, setOrchestrationSteps] = useState<OrchestrationStep[]>([]);
+  const [dashboards, setDashboards] = useState<DashboardData[]>([]);
+  const [articleFeeds, setArticleFeeds] = useState<ArticlesFeedData[]>([]);
   const agentSpecRef = useRef(agentSpec);
   const onMemoryUpdateRef = useRef(onMemoryUpdate);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -87,6 +91,12 @@ export function PreviewPanel({
         if (dataPart.type === "data-gmailAuthRequired") {
           window.location.href = dataPart.data.redirectUrl;
         }
+        if (dataPart.type === "data-dashboard") {
+          setDashboards((prev) => [...prev, dataPart.data]);
+        }
+        if (dataPart.type === "data-articlesFeed") {
+          setArticleFeeds((prev) => [...prev, dataPart.data]);
+        }
       },
     });
 
@@ -97,6 +107,8 @@ export function PreviewPanel({
   useEffect(() => {
     if (status === "submitted") {
       setOrchestrationSteps([]);
+      setDashboards([]);
+      setArticleFeeds([]);
     }
   }, [status]);
 
@@ -135,6 +147,8 @@ export function PreviewPanel({
     if (isBusy) stop();
     setMessages([]);
     setOrchestrationSteps([]);
+    setDashboards([]);
+    setArticleFeeds([]);
     postToFrame({ type: "agent-preview-reset" });
   }
 
@@ -180,6 +194,27 @@ export function PreviewPanel({
       {isSwarm && orchestrationSteps.length > 0 && (
         <div className="shrink-0 border-b border-white/[0.05] px-4 py-2">
           <SwarmOrchestrationTimeline steps={orchestrationSteps} isActive={isBusy} />
+        </div>
+      )}
+
+      {articleFeeds.length > 0 && (
+        <div className="shrink-0 overflow-y-auto border-b border-white/[0.05]" style={{ maxHeight: "60%" }}>
+          {articleFeeds.map((feed) => (
+            <ArticlesFeed key={feed.id} feed={feed} />
+          ))}
+        </div>
+      )}
+
+      {dashboards.length > 0 && (
+        <div className="shrink-0 space-y-0 overflow-y-auto border-b border-white/[0.05] px-4 py-2" style={{ maxHeight: "50%" }}>
+          {dashboards.map((dashboard) => (
+            <DashboardCard
+              key={dashboard.id}
+              id={dashboard.id}
+              title={dashboard.title}
+              html={dashboard.html}
+            />
+          ))}
         </div>
       )}
 

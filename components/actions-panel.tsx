@@ -3,8 +3,6 @@
 import {
   Download,
   ExternalLink,
-  FileJson,
-  FileText,
   Loader2,
   Palette,
   Play,
@@ -57,7 +55,7 @@ function SpecRow({ label, value }: { label: string; value: string }) {
   const filled = Boolean(value);
   return (
     <div className="flex items-start justify-between gap-3 py-1.5">
-      <span className="hud-label shrink-0 pt-0.5">{label}</span>
+      <span className="shrink-0 pt-0.5 text-[11px] font-medium text-muted-foreground">{label}</span>
       {filled ? (
         <span className="min-w-0 max-w-[60%] truncate text-right text-[12px] text-foreground/90">
           {value}
@@ -71,10 +69,8 @@ function SpecRow({ label, value }: { label: string; value: string }) {
 
 function SectionHeader({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mb-2 flex items-center gap-2">
-      <div className="size-1 rounded-full bg-primary/70" />
-      <p className="hud-label">{children}</p>
-      <div className="h-px flex-1 bg-gradient-to-r from-white/[0.08] to-transparent" />
+    <div className="mb-3 border-b border-border/50 pb-1.5">
+      <p className="text-xs font-semibold text-foreground/60 uppercase tracking-wide">{children}</p>
     </div>
   );
 }
@@ -274,18 +270,11 @@ export function ActionsPanel({
   return (
     <HudPanel tier={1} className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="flex items-center justify-between gap-3 border-b border-white/[0.05] px-4 py-3.5">
-        <div className="flex items-center gap-2.5">
-          <span className="relative flex size-1.5">
-            <span className="absolute inset-0 animate-ping rounded-full bg-system/40" />
-            <span className="relative size-1.5 rounded-full bg-system shadow-[0_0_6px_rgba(34,211,238,0.7)]" />
-          </span>
-          <div>
-            <p className="hud-label leading-none">Telemetry</p>
-            <h2 className="mt-1 text-[13px] font-medium leading-none text-foreground">
-              Actions
-            </h2>
-          </div>
-        </div>
+        <h2 className="text-sm font-semibold text-foreground">Agent Status</h2>
+        <span className="relative flex size-2">
+          <span className="absolute inset-0 animate-ping rounded-full bg-success/40" />
+          <span className="relative size-2 rounded-full bg-success/70 shadow-[0_0_6px_rgba(16,185,129,0.6)]" />
+        </span>
       </div>
 
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-3.5">
@@ -301,15 +290,15 @@ export function ActionsPanel({
           />
         </div>
 
-        {/* Agent snapshot */}
+        {/* Agent details */}
         <div className="rounded-xl border border-white/[0.06] bg-gradient-to-b from-white/[0.03] to-transparent p-3.5">
-          <SectionHeader>Agent snapshot</SectionHeader>
+          <SectionHeader>Your Agent</SectionHeader>
           <div className="divide-y divide-white/[0.04]">
             <SpecRow label="Name" value={agentSpec.name === "Untitled Agent" ? "" : agentSpec.name} />
             <SpecRow label="Role" value={agentSpec.persona.role} />
-            <SpecRow label="Tone" value={agentSpec.persona.tone} />
+            <SpecRow label="Personality" value={agentSpec.persona.tone} />
             <SpecRow
-              label="Tools"
+              label="Capabilities"
               value={
                 agentSpec.tools.length > 0
                   ? agentSpec.tools.map((t) => t.name).join(", ")
@@ -325,8 +314,8 @@ export function ActionsPanel({
                   : ""
               }
             />
-            <SpecRow label="Template" value={ui.template} />
-            <SpecRow label="Platform" value={agentSpec.deployment?.platform ?? "html"} />
+            <SpecRow label="Design" value={ui.template} />
+            <SpecRow label="Deploy target" value={agentSpec.deployment?.platform ?? "html"} />
           </div>
         </div>
 
@@ -341,10 +330,9 @@ export function ActionsPanel({
 
         {onSpecUpdate && (
           <div className="rounded-xl border border-white/[0.06] bg-gradient-to-b from-white/[0.03] to-transparent p-3.5">
-            <SectionHeader>Design & deployment</SectionHeader>
+            <SectionHeader>Design</SectionHeader>
             <p className="mb-3 text-[11.5px] leading-relaxed text-muted-foreground">
-              Describe your ideal UI in the chat — each agent gets a unique
-              frontend generated from scratch. Edit code manually below if needed.
+              Choose how your agent&apos;s interface looks. You can describe it in chat or tweak it below.
             </p>
             <StyleConfigPanel agentSpec={agentSpec} onSpecUpdate={onSpecUpdate} />
             <div className="mt-4 border-t border-white/[0.05] pt-4">
@@ -366,9 +354,9 @@ export function ActionsPanel({
 
         {/* Preview */}
         <div className="rounded-xl border border-white/[0.06] bg-gradient-to-b from-white/[0.03] to-transparent p-3.5">
-          <SectionHeader>Pre-deploy preview</SectionHeader>
+          <SectionHeader>Try It Out</SectionHeader>
           <p className="mb-3 text-[11.5px] leading-relaxed text-muted-foreground">
-            Test your agent as an end user before exporting.
+            See how your agent will look and feel before going live.
           </p>
           <Button
             className={cn(
@@ -384,19 +372,17 @@ export function ActionsPanel({
             Open preview
           </Button>
           {!canPreview && (
-            <p className="mt-2 text-center font-mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground/70">
-              {!hasFrontend
-                ? "Needs frontend design · name · role · instructions"
-                : "Needs name · role · instructions"}
+            <p className="mt-2 text-center text-[11px] text-muted-foreground/70">
+              Add a name, role, and instructions to unlock preview
             </p>
           )}
         </div>
 
         {/* Save agent */}
         <div className="rounded-xl border border-white/[0.06] bg-gradient-to-b from-white/[0.03] to-transparent p-3.5">
-          <SectionHeader>Save agent</SectionHeader>
+          <SectionHeader>Save</SectionHeader>
           <p className="mb-3 text-[11.5px] leading-relaxed text-muted-foreground">
-            Persist spec to disk for the local scheduler and OAuth flow.
+            Save your agent to come back to it later.
           </p>
           <Button
             variant="outline"
@@ -423,22 +409,10 @@ export function ActionsPanel({
 
         {/* Export */}
         <div className="rounded-xl border border-white/[0.06] bg-gradient-to-b from-white/[0.03] to-transparent p-3.5">
-          <SectionHeader>Export bundle</SectionHeader>
-          <div className="mb-3 flex flex-wrap gap-1.5">
-            {[
-              { ext: "json", icon: FileJson },
-              { ext: "md", icon: FileText },
-              { ext: "html/ts/py", icon: FileText },
-            ].map((f, i) => (
-              <span
-                key={i}
-                className="inline-flex items-center gap-1 rounded-md border border-white/[0.07] bg-white/[0.02] px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-muted-foreground"
-              >
-                <f.icon className="size-2.5" />
-                .{f.ext}
-              </span>
-            ))}
-          </div>
+          <SectionHeader>Download</SectionHeader>
+          <p className="mb-3 text-[11.5px] leading-relaxed text-muted-foreground">
+            Download a complete package you can run or share.
+          </p>
           <Button
             variant="outline"
             className="lift h-9 w-full gap-2 border-white/[0.08] bg-white/[0.02] hover:border-primary/35 hover:bg-primary/[0.06] hover:text-primary"
@@ -448,25 +422,25 @@ export function ActionsPanel({
             {isExporting ? (
               <>
                 <Loader2 className="size-3.5 animate-spin" />
-                Preparing
+                Preparing…
               </>
             ) : (
               <>
                 <Download className="size-3.5" />
-                Download bundle
+                Download files
               </>
             )}
           </Button>
           {!canExport && (
-            <p className="mt-2 text-center font-mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground/70">
-              Awaiting spec data
+            <p className="mt-2 text-center text-[11px] text-muted-foreground/70">
+              Finish building your agent to download
             </p>
           )}
         </div>
 
-        {/* Deploy */}
+        {/* Go Live */}
         <div className="rounded-xl border border-white/[0.06] bg-gradient-to-b from-white/[0.03] to-transparent p-3.5">
-          <SectionHeader>Deploy</SectionHeader>
+          <SectionHeader>Go Live</SectionHeader>
           <div className="mb-3 flex gap-1 rounded-lg border border-white/[0.06] bg-white/[0.02] p-1">
             {(["local", "railway"] as const).map((t) => (
               <button
@@ -481,25 +455,24 @@ export function ActionsPanel({
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                {t === "local" ? "Local Docker" : "Railway"}
+                {t === "local" ? "Run locally" : "Cloud deploy"}
               </button>
             ))}
           </div>
           <p className="mb-3 text-[11.5px] leading-relaxed text-muted-foreground">
             {target === "local"
-              ? "Generate a runnable agent and launch it in a container."
-              : "Generate a Railway-ready bundle; deploy it live with the Railway CLI."}
+              ? "Run your agent on this computer."
+              : "Deploy your agent to the cloud with one command."}
           </p>
 
           {plan.length > 0 && (
             <div className="mb-3 rounded-md border border-white/[0.06] bg-white/[0.02] px-2.5 py-2">
-              <p className="font-mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground/60">
-                Connector secrets read from&nbsp;
-                <span className="text-system">.env</span>
+              <p className="text-[11px] text-muted-foreground/70">
+                Uses your saved account connections:
               </p>
               <div className="mt-1.5 space-y-0.5">
                 {plan.map((c) => (
-                  <p key={c.slot} className="font-mono text-[10px] text-foreground/60">
+                  <p key={c.slot} className="text-[11.5px] text-foreground/70">
                     · {c.name}
                   </p>
                 ))}
@@ -516,7 +489,7 @@ export function ActionsPanel({
                 disabled={isDeploying}
                 className="accent-primary"
               />
-              Voice (ElevenLabs) — mic + spoken replies
+              Enable voice — microphone input &amp; spoken replies
             </label>
             {voiceEnabled && (
               <div className="space-y-1.5">
@@ -568,31 +541,30 @@ export function ActionsPanel({
             {isDeploying ? (
               <>
                 <Loader2 className="size-3.5 animate-spin" />
-                {target === "railway" ? "Preparing" : "Deploying"}
+                {target === "railway" ? "Preparing…" : "Deploying…"}
               </>
             ) : (
               <>
                 <Rocket className="size-3.5" />
-                {target === "railway" ? "Prepare for Railway" : "Deploy locally"}
+                {target === "railway" ? "Prepare for cloud" : "Run locally"}
               </>
             )}
           </Button>
 
           {prepared && (
-            <div className="mt-2 space-y-2 rounded-md border border-system/25 bg-system/[0.05] p-2.5 text-[11px]">
-              <p className="text-foreground/90">
-                Railway bundle ready in{" "}
-                <span className="font-mono">{prepared.dir}</span>. Run:
+            <div className="mt-2 space-y-2 rounded-md border border-success/25 bg-success/[0.05] p-2.5">
+              <p className="text-[12px] font-medium text-foreground/90">Ready to deploy</p>
+              <p className="text-[11.5px] text-muted-foreground">
+                Your agent package is ready. Open a terminal in{" "}
+                <span className="rounded bg-black/20 px-1 py-0.5 font-mono text-[10px]">{prepared.dir}</span>{" "}
+                and run the command below to go live.
               </p>
-              <pre className="overflow-auto rounded bg-black/30 p-2 font-mono text-[10px] text-system">
+              <pre className="overflow-auto rounded bg-black/30 p-2 font-mono text-[10px] text-success/90">
                 {prepared.command}
               </pre>
-              <p className="text-muted-foreground">
-                Set these env vars in the Railway dashboard:
+              <p className="text-[11.5px] text-muted-foreground">
+                You&apos;ll also need to add your account credentials in the Railway dashboard.
               </p>
-              <pre className="max-h-28 overflow-auto rounded bg-black/30 p-2 font-mono text-[10px] text-muted-foreground">
-                {Object.keys(prepared.env).join("\n")}
-              </pre>
             </div>
           )}
 
@@ -601,7 +573,7 @@ export function ActionsPanel({
               href={deployedUrl}
               target="_blank"
               rel="noreferrer"
-              className="mt-2 flex items-center justify-center gap-2 rounded-md border border-system/30 bg-system/[0.06] px-3 py-2 text-[12px] text-system transition-colors hover:bg-system/[0.12]"
+              className="mt-2 flex items-center justify-center gap-2 rounded-md border border-success/30 bg-success/[0.06] px-3 py-2 text-[12px] text-success transition-colors hover:bg-success/[0.12]"
             >
               <ExternalLink className="size-3.5" />
               {deployedUrl}
@@ -615,21 +587,26 @@ export function ActionsPanel({
           )}
 
           {deployLogs.length > 0 && (
-            <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-md border border-white/[0.06] bg-black/30 p-2 font-mono text-[10px] leading-relaxed text-muted-foreground">
-              {deployLogs.join("\n")}
-            </pre>
+            <details className="mt-2">
+              <summary className="cursor-pointer select-none text-[11px] text-muted-foreground/70 hover:text-muted-foreground">
+                {isDeploying ? "Deploying… see details" : "Deployment log"}
+              </summary>
+              <pre className="mt-1.5 max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-md border border-white/[0.06] bg-black/30 p-2 font-mono text-[10px] leading-relaxed text-muted-foreground">
+                {deployLogs.join("\n")}
+              </pre>
+            </details>
           )}
 
           {!canExport && (
-            <p className="mt-2 text-center font-mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground/70">
-              Build an agent first
+            <p className="mt-2 text-center text-[11px] text-muted-foreground/70">
+              Complete your agent setup to go live
             </p>
           )}
         </div>
 
         {deployments.length > 0 && (
           <div className="rounded-xl border border-white/[0.06] bg-gradient-to-b from-white/[0.03] to-transparent p-3.5">
-            <SectionHeader>Deployments</SectionHeader>
+            <SectionHeader>Live Agents</SectionHeader>
             <div className="space-y-2">
               {deployments.map((d) => (
                 <div
@@ -642,7 +619,7 @@ export function ActionsPanel({
                       {d.name.replace(/^agent-/, "")}
                     </p>
                     {d.url && (
-                      <p className="truncate font-mono text-[10px] text-muted-foreground">
+                      <p className="truncate text-[11px] text-muted-foreground">
                         {d.url}
                       </p>
                     )}

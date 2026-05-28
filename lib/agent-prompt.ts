@@ -6,6 +6,15 @@ import {
 import { hasAgentFrontend } from "./deploy-html";
 import { resolveMemoryTemplates, type SwarmMemoryState } from "./swarm-memory";
 
+function getCurrentDateString(): string {
+  return new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
 export type RuntimePromptOptions = {
   liveTools?: boolean;
   swarmMode?: boolean;
@@ -61,7 +70,29 @@ export function buildAgentRuntimePrompt(
           .join("\n")}\n\nWhen responding after delegation, synthesize sub-agent work into one cohesive end-user answer.`
       : "";
 
+  const dashboardSection = `
+
+## Rendering Tools
+You have two visual rendering tools: \`renderArticles\` and \`renderDashboard\`.
+
+### renderArticles — use for news, stories, and article lists
+Call \`renderArticles\` whenever you return a list of news articles, search results, or any collection of stories.
+- Pass each article with: title, summary (2-4 sentences), source, url, and optionally imageUrl, publishedAt, and category.
+- The UI renders them as rich interactive cards with images, expand/collapse summaries, and source links — far better than a plain bulleted list.
+- After fetching news via \`web_search\`, always prefer \`renderArticles\` over plain markdown for the results.
+- Call once per topic or briefing section. Multiple calls produce multiple card feeds.
+
+### renderDashboard — use for structured data, metrics, and tables
+Call \`renderDashboard\` for visual summaries of data that is NOT a list of articles — emails, calendar events, charts, metrics, tabular data.
+- Pass a complete, self-contained HTML document with inline <style> blocks.
+- CDN script tags (e.g. Chart.js) are allowed for data visualizations.
+- Do not use fetch() or XMLHttpRequest inside the HTML — all data must be baked in.
+- Use a clean, modern layout with a white background and readable typography.`;
+
   return `You are ${spec.name}, an AI agent deployed for end users.
+
+## Current Date
+Today is ${getCurrentDateString()}. Always use this as the authoritative date — never infer or guess the date from other context.
 
 ## Persona
 - Role: ${spec.persona.role}
@@ -69,7 +100,7 @@ export function buildAgentRuntimePrompt(
 
 ## Instructions
 ${spec.instructions}
-${toolsSection}${swarmSection}
+${toolsSection}${swarmSection}${dashboardSection}
 
 Stay fully in character. You are speaking with an end user — not a developer. Be helpful, concise, and true to your defined tone.`;
 }
@@ -96,6 +127,9 @@ export function buildOrchestratorRuntimePrompt(
   const memSection = buildMemorySection(spec, memoryState);
 
   return `You are the routing orchestrator for "${spec.name}".
+
+## Current Date
+Today is ${getCurrentDateString()}.
 
 ## Orchestrator role
 ${spec.persona.role}
@@ -127,6 +161,9 @@ export function buildSubAgentRuntimePrompt(
     spec && memoryState ? buildMemorySection(spec, memoryState, agentMemory) : "";
 
   return `You are a specialist sub-agent in a coordinated swarm.
+
+## Current Date
+Today is ${getCurrentDateString()}.
 
 ## Role
 ${agent.role}

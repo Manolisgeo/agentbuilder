@@ -87,22 +87,20 @@ export default function Home() {
         <AppSidebar />
 
         <div className="flex min-w-0 flex-1 flex-col bg-background">
-          <header className="relative shrink-0 border-b border-black/[0.05] bg-white/40 px-7 pt-5 pb-4 backdrop-blur-sm dark:border-white/[0.04] dark:bg-transparent dark:backdrop-blur-none">
+          <header className="relative shrink-0 border-b border-black/[0.05] bg-white/40 px-7 py-3.5 backdrop-blur-sm dark:border-white/[0.04] dark:bg-transparent dark:backdrop-blur-none">
             <div className="flex items-center justify-between gap-6">
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2.5">
-                  <span className="font-mono text-[10px] uppercase tracking-[0.28em] text-muted-foreground/80">
-                    Swarm
-                  </span>
-                  <span className="size-1 rounded-full bg-black/20 dark:bg-white/15" />
-                  <span className="font-mono text-[10px] uppercase tracking-[0.28em] text-muted-foreground/60">
-                    Workspace
-                  </span>
-                  <span className="size-1 rounded-full bg-black/20 dark:bg-white/15" />
-                  <span className="font-mono text-[10px] uppercase tracking-[0.28em] text-foreground/70">
-                    Agent builder
-                  </span>
-                </div>
+                <h1 className="text-[15px] font-semibold tracking-tight text-foreground">
+                  Agent Builder
+                </h1>
+                {hasAgent && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-muted-foreground/40">/</span>
+                    <span className="max-w-[180px] truncate text-sm text-muted-foreground">
+                      {agentSpec.name}
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center gap-3">
@@ -123,14 +121,6 @@ export default function Home() {
                   <span className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-background bg-success" />
                 </div>
               </div>
-            </div>
-
-            <div className="mt-2 flex items-end justify-between gap-6">
-              <h1 className="text-2xl font-semibold tracking-tight">
-                <span className="text-foreground">Build </span>
-                <span className="text-primary">AI agents</span>
-                <span className="text-foreground"> that work for you</span>
-              </h1>
             </div>
           </header>
 

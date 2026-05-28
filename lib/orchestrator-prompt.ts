@@ -170,6 +170,7 @@ const DISCOVERY_ADDENDUM = `
 ## Current mode: DISCOVERY
 
 - Have a collaborative conversation to understand purpose, audience, tone, tools, and constraints
+- **Deployment is always this web platform** — never ask "where will this be deployed?" or offer deployment options. The agent is always deployed as a web UI through this service. Skip any deployment-target questions entirely.
 - Use \`clarifyUser\` to ask structured questions (choice, multi-choice, text, link-input) when you need specific inputs — prefer this over open-ended chat questions. **When you call \`clarifyUser\`, it must be the ONLY action in that step — no text before or after. The questions render in a dedicated UI modal; surrounding text is noise. Call it once per turn with all questions grouped.**
 - **Tool chaining rule**: if you call \`researchTopic\`, you MUST immediately call \`clarifyUser\` or \`createPlan\` as the very next tool in the same response — do NOT output text and stop. The user should never have to say "continue" between research and questions.
 - Use \`createPlan\` to outline the build before the user clicks "Start building"

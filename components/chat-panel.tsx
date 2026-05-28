@@ -242,15 +242,10 @@ export function ChatPanel({
             className={`size-1.5 rounded-full ${
               isBusy
                 ? "bg-primary shadow-[0_0_8px_rgba(255,107,26,0.8)]"
-                : "bg-system shadow-[0_0_6px_rgba(34,211,238,0.6)] idle-pulse"
+                : "bg-success/70 shadow-[0_0_6px_rgba(16,185,129,0.5)] idle-pulse"
             }`}
           />
-          <div>
-            <p className="hud-label leading-none">Conversation</p>
-            <h2 className="mt-1 text-[13px] font-medium leading-none text-foreground">
-              Builder
-            </h2>
-          </div>
+          <h2 className="text-sm font-semibold text-foreground">Chat</h2>
         </div>
 
         <div className="flex items-center gap-2">
@@ -263,12 +258,12 @@ export function ChatPanel({
             <Bug className="size-3" />
           </button>
           {isDiscovery ? (
-            <span className="flex items-center gap-1.5 rounded-full border border-system/25 bg-system/[0.06] px-2.5 py-1 font-mono text-[9px] uppercase tracking-[0.16em] text-system">
-              <span className="size-1 rounded-full bg-system" />
-              Discovery
+            <span className="flex items-center gap-1.5 rounded-full border border-border bg-muted/50 px-2.5 py-1 text-[11px] text-muted-foreground">
+              <span className="size-1.5 rounded-full bg-muted-foreground/50" />
+              Planning
             </span>
           ) : (
-            <span className="flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/[0.08] px-2.5 py-1 font-mono text-[9px] uppercase tracking-[0.16em] text-primary">
+            <span className="flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/[0.08] px-2.5 py-1 text-[11px] text-primary">
               <span className="size-1 rounded-full bg-primary [animation:idle-pulse_1.4s_ease-in-out_infinite]" />
               Building
             </span>
@@ -292,7 +287,7 @@ export function ChatPanel({
               </div>
 
               <div className="space-y-2">
-                <p className="hud-label px-1">Quick starts</p>
+                <p className="px-1 text-xs font-semibold text-foreground/50 uppercase tracking-wide">Quick starts</p>
                 <div className="space-y-1.5">
                   {STARTER_PROMPTS.map((prompt) => (
                     <button
@@ -308,7 +303,7 @@ export function ChatPanel({
                         <prompt.icon className="size-3.5" strokeWidth={1.8} />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-[11px] font-mono uppercase tracking-[0.12em] text-muted-foreground/80">
+                        <p className="text-[11px] font-medium text-muted-foreground/70">
                           {prompt.label}
                         </p>
                         <p className="mt-1 text-[12.5px] leading-relaxed text-foreground/85 group-hover:text-foreground">
@@ -384,7 +379,7 @@ export function ChatPanel({
           placeholder={
             isDiscovery
               ? "Describe your agent, ask for research, or request a plan…"
-              : "Refine nodes, add tools, or restructure the architecture…"
+              : "Refine your agent, add tools, or change how it works…"
           }
         />
       </div>

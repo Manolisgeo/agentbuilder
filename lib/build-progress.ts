@@ -40,12 +40,12 @@ export function getBuildStatusLabel(
   hasAgent: boolean,
   buildPhase: BuildPhase = "building"
 ): string {
-  if (buildPhase === "discovery" && !hasAgent) return "DISCOVERY";
-  if (isBuilding) return "ASSEMBLING AGENT";
-  if (progress >= 100 || (hasAgent && progress >= 80)) return "AGENT READY";
-  if (progress >= 60) return "CONFIGURING TOOLS";
-  if (progress >= 50) return "DESIGNING UI";
-  if (progress >= 40) return "WRITING INSTRUCTIONS";
-  if (progress >= 20) return "ASSEMBLING PERSONA";
-  return "AWAITING INPUT";
+  if (buildPhase === "discovery" && !hasAgent) return "Planning your agent";
+  if (isBuilding) return "Building your agent…";
+  if (progress >= 100 || (hasAgent && progress >= 80)) return "Agent ready";
+  if (progress >= 60) return "Setting up tools";
+  if (progress >= 50) return "Designing interface";
+  if (progress >= 40) return "Writing instructions";
+  if (progress >= 20) return "Defining persona";
+  return "Ready when you are";
 }

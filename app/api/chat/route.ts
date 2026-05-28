@@ -100,10 +100,11 @@ export async function POST(req: Request) {
             }
             // If the model was cut off by length or a tool error, append a recovery hint.
             if (finishReason === "length" || finishReason === "error") {
-              writer.write({
-                type: "text",
-                text: `\n\n> ⚠️ Build stopped early (reason: ${finishReason}). You can ask me to continue from where I left off, or click Stop and retry.`,
-              });
+              const hintId = "stop-hint";
+              const hintText = `\n\n> ⚠️ Build stopped early (reason: ${finishReason}). You can ask me to continue from where I left off, or click Stop and retry.`;
+              writer.write({ type: "text-start", id: hintId });
+              writer.write({ type: "text-delta", id: hintId, delta: hintText });
+              writer.write({ type: "text-end", id: hintId });
             }
           },
         });
