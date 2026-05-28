@@ -3,12 +3,16 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import {
+  AlertTriangle,
   ArrowRight,
+  Bug,
   Hammer,
   Headphones,
   Mail,
   Newspaper,
   Search,
+  Square,
+  X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChatComposer } from "@/components/chat/chat-composer";
@@ -80,6 +84,9 @@ export function ChatPanel({
   >({});
   const [clarifyBlock, setClarifyBlock] = useState<ClarifyBlock | null>(null);
   const [clarifySubmitted, setClarifySubmitted] = useState(false);
+  const [busySince, setBusySince] = useState<number | null>(null);
+  const [stuckWarning, setStuckWarning] = useState(false);
+  const [debugOpen, setDebugOpen] = useState(false);
   const agentSpecRef = useRef(agentSpec);
   const buildPhaseRef = useRef(buildPhase);
   const scrollAnchorRef = useRef<HTMLDivElement>(null);
@@ -143,6 +150,27 @@ export function ChatPanel({
   useEffect(() => {
     onBuildingChange?.(isBusy && buildPhaseRef.current === "building");
   }, [isBusy, buildPhase, onBuildingChange]);
+
+  // Track when a build-phase run starts and warn if stuck > 45 s
+  useEffect(() => {
+    if (isBusy && buildPhaseRef.current === "building") {
+      if (busySince === null) setBusySince(Date.now());
+    } else {
+      setBusySince(null);
+      setStuckWarning(false);
+    }
+  }, [isBusy, busySince]);
+
+  useEffect(() => {
+    if (busySince === null) return;
+    const id = setInterval(() => {
+      if (Date.now() - busySince > 45_000) {
+        setStuckWarning(true);
+        clearInterval(id);
+      }
+    }, 2_000);
+    return () => clearInterval(id);
+  }, [busySince]);
 
   useEffect(() => {
     const anchor = scrollAnchorRef.current;
@@ -225,17 +253,27 @@ export function ChatPanel({
           </div>
         </div>
 
-        {isDiscovery ? (
-          <span className="flex items-center gap-1.5 rounded-full border border-system/25 bg-system/[0.06] px-2.5 py-1 font-mono text-[9px] uppercase tracking-[0.16em] text-system">
-            <span className="size-1 rounded-full bg-system" />
-            Discovery
-          </span>
-        ) : (
-          <span className="flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/[0.08] px-2.5 py-1 font-mono text-[9px] uppercase tracking-[0.16em] text-primary">
-            <span className="size-1 rounded-full bg-primary [animation:idle-pulse_1.4s_ease-in-out_infinite]" />
-            Building
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setDebugOpen(true)}
+            className="rounded p-1 text-muted-foreground/40 transition-colors hover:text-muted-foreground/80"
+            title="Debug — raw conversation &amp; logs"
+          >
+            <Bug className="size-3" />
+          </button>
+          {isDiscovery ? (
+            <span className="flex items-center gap-1.5 rounded-full border border-system/25 bg-system/[0.06] px-2.5 py-1 font-mono text-[9px] uppercase tracking-[0.16em] text-system">
+              <span className="size-1 rounded-full bg-system" />
+              Discovery
+            </span>
+          ) : (
+            <span className="flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/[0.08] px-2.5 py-1 font-mono text-[9px] uppercase tracking-[0.16em] text-primary">
+              <span className="size-1 rounded-full bg-primary [animation:idle-pulse_1.4s_ease-in-out_infinite]" />
+              Building
+            </span>
+          )}
+        </div>
       </div>
 
       <ScrollArea className="min-h-0 flex-1 px-3">
@@ -296,6 +334,28 @@ export function ChatPanel({
 
           {/* ClarifyModal is rendered via portal over the full page */}
 
+          {stuckWarning && !error && (
+            <div className="flex items-start gap-2.5 rounded-xl border border-amber-500/30 bg-amber-500/[0.07] px-3.5 py-3">
+              <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-amber-400" />
+              <div className="min-w-0 flex-1">
+                <p className="text-[12.5px] font-medium text-amber-300">
+                  Build is taking longer than expected
+                </p>
+                <p className="mt-0.5 text-[11.5px] leading-relaxed text-amber-300/70">
+                  A tool call may have timed out silently. You can stop and retry, or wait a bit longer.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={stop}
+                className="flex shrink-0 items-center gap-1.5 rounded-md border border-amber-500/30 bg-amber-500/10 px-2.5 py-1.5 text-[11px] font-medium text-amber-300 transition-colors hover:bg-amber-500/20"
+              >
+                <Square className="size-3 fill-current" />
+                Stop
+              </button>
+            </div>
+          )}
+
           {error && <HudError message={error.message} />}
           <div ref={scrollAnchorRef} />
         </div>
@@ -332,6 +392,75 @@ export function ChatPanel({
 
     {clarifyBlock && (
       <ClarifyModal block={clarifyBlock} onSubmit={handleClarifySubmit} />
+    )}
+
+    {debugOpen && (
+      <div className="fixed inset-0 z-50 flex items-end justify-end p-4">
+        <div
+          className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+          onClick={() => setDebugOpen(false)}
+        />
+        <div className="relative flex h-[80vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0d0d0f] shadow-2xl">
+          <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-3">
+            <div className="flex items-center gap-2">
+              <Bug className="size-3.5 text-muted-foreground" />
+              <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                Debug — raw conversation
+              </span>
+              <span className="rounded bg-white/[0.05] px-1.5 py-0.5 font-mono text-[9px] text-muted-foreground/60">
+                {messages.length} msg · phase: {buildPhase} · status: {status}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setDebugOpen(false)}
+              className="rounded p-1 text-muted-foreground/50 transition-colors hover:text-muted-foreground"
+            >
+              <X className="size-3.5" />
+            </button>
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto p-4">
+            {messages.length === 0 ? (
+              <p className="font-mono text-[11px] text-muted-foreground/50">No messages yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {messages.map((msg, i) => (
+                  <div key={i} className="rounded-lg border border-white/[0.05] bg-white/[0.02] p-3">
+                    <div className="mb-1.5 flex items-center gap-2">
+                      <span
+                        className={`font-mono text-[9px] uppercase tracking-[0.14em] ${
+                          msg.role === "user"
+                            ? "text-system"
+                            : msg.role === "assistant"
+                              ? "text-primary"
+                              : "text-violet-400"
+                        }`}
+                      >
+                        {msg.role}
+                      </span>
+                      {msg.id && (
+                        <span className="font-mono text-[9px] text-muted-foreground/40">
+                          {msg.id}
+                        </span>
+                      )}
+                    </div>
+                    <pre className="whitespace-pre-wrap break-all font-mono text-[10px] leading-relaxed text-foreground/70">
+                      {JSON.stringify(msg, null, 2)}
+                    </pre>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          {error && (
+            <div className="border-t border-red-500/20 bg-red-500/[0.05] px-4 py-3">
+              <p className="font-mono text-[10px] text-red-400">
+                <span className="text-red-500/60">error: </span>{error.message}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
     )}
     </>
   );

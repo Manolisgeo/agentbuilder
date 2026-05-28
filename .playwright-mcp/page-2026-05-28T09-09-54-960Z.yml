@@ -1,0 +1,193 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - img [ref=e7]
+      - navigation [ref=e9]:
+        - link "Builder" [ref=e10] [cursor=pointer]:
+          - /url: /
+          - img [ref=e13]
+          - generic: Builder
+        - link "Agents" [ref=e16] [cursor=pointer]:
+          - /url: /agents
+          - img [ref=e18]
+          - generic: Agents
+        - button "Workflows" [ref=e21]:
+          - img [ref=e23]
+          - generic: Workflows
+        - button "Export" [ref=e27]:
+          - img [ref=e29]
+          - generic: Export
+      - generic [ref=e32]:
+        - button "Settings" [ref=e33]:
+          - img [ref=e34]
+        - img [ref=e39]
+    - generic [ref=e43]:
+      - banner [ref=e44]:
+        - generic [ref=e45]:
+          - generic [ref=e47]:
+            - generic [ref=e48]: Swarm
+            - generic [ref=e50]: Workspace
+            - generic [ref=e52]: Agent builder
+          - generic [ref=e53]:
+            - generic [ref=e54]:
+              - generic [ref=e56]: DISCOVERY
+              - generic [ref=e57]: 0%
+            - button "Command palette" [ref=e58]:
+              - img [ref=e59]
+              - generic [ref=e61]: Quick actions
+              - generic [ref=e62]: ⌘K
+        - heading "Build AI agents that work for you" [level=1] [ref=e64]
+      - main [ref=e65]:
+        - generic [ref=e67]:
+          - generic [ref=e69]:
+            - generic [ref=e70]:
+              - generic [ref=e73]:
+                - paragraph [ref=e74]: Conversation
+                - heading "Builder" [level=2] [ref=e75]
+              - generic [ref=e76]: Discovery
+            - generic [ref=e79]:
+              - generic [ref=e261]:
+                - img [ref=e263]
+                - generic [ref=e266]:
+                  - generic [ref=e268]: You
+                  - paragraph [ref=e271]: hello
+              - generic [ref=e272]:
+                - img [ref=e274]
+                - generic [ref=e277]:
+                  - generic [ref=e279]: Swarm
+                  - generic [ref=e281]:
+                    - paragraph [ref=e282]: Hey there! 👋 I'm Swarm, your AI agent architect. I'm here to help you design and build custom AI agents.
+                    - paragraph [ref=e283]: Right now we're in **discovery mode** — I'd love to learn what you're looking to build. Could you start by sharing a bit about what kind of agent or swarm you have in mind?
+                    - paragraph [ref=e284]: "Here are some prompts to get us going:"
+                    - list [ref=e285]:
+                      - listitem [ref=e286]:
+                        - generic [ref=e288]: "**What's the main purpose?** (e.g., customer support, research assistant, content creation, code review, data analysis...)"
+                      - listitem [ref=e289]:
+                        - generic [ref=e291]: "**Who's the audience?** (internal team, public users, just for you...)"
+                      - listitem [ref=e292]:
+                        - generic [ref=e294]: "**Any specific tone or personality you'd like?** (professional, friendly, witty, formal...)"
+                    - paragraph [ref=e295]: Or if you have a full idea already, just throw it at me and I'll start researching and planning!
+            - button "Start building" [ref=e299]:
+              - img
+              - text: Start building
+            - generic [ref=e119]:
+              - textbox "Describe your agent, ask for research, or request a plan…" [active] [ref=e120]
+              - generic [ref=e121]:
+                - generic [ref=e122]:
+                  - img [ref=e123]
+                  - generic [ref=e126]:
+                    - generic [ref=e300]: Enter
+                    - text: to send
+                    - generic [ref=e301]: ⇧
+                    - generic [ref=e302]: ↵
+                    - text: for newline
+                - button "Send message" [disabled] [ref=e130]:
+                  - img [ref=e303]
+          - separator "Resize panel" [ref=e133]
+          - generic [ref=e140]:
+            - generic [ref=e141]:
+              - button "Canvas" [ref=e143]:
+                - img [ref=e144]
+                - text: Canvas
+              - button "Preview" [disabled] [ref=e149]:
+                - img [ref=e150]
+                - text: Preview
+            - generic [ref=e154]:
+              - generic [ref=e155]:
+                - generic [ref=e156]:
+                  - img [ref=e158]
+                  - generic [ref=e163]: Workflow canvas
+                - button "Fit canvas to view" [ref=e165]:
+                  - img [ref=e166]
+              - generic:
+                - generic:
+                  - paragraph: Your agent architecture will appear here
+                  - paragraph: Describe your agent in chat — nodes will connect as the spec is assembled.
+              - application [ref=e172]:
+                - generic [ref=e174]:
+                  - generic:
+                    - generic:
+                      - img
+                    - generic:
+                      - group:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - img
+                                - generic:
+                                  - paragraph: Agent
+                                  - paragraph: Name & role
+                              - generic:
+                                - paragraph: Waiting to be configured…
+                      - group:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - img
+                                - generic:
+                                  - paragraph: Instructions
+                                  - paragraph: System prompt
+                              - generic:
+                                - paragraph: Waiting to be configured…
+                      - group:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - img
+                                - generic:
+                                  - paragraph: Tool
+                                  - paragraph: Capability
+                              - generic:
+                                - paragraph: Waiting to be configured…
+                - img
+          - separator "Resize panel" [ref=e176]
+          - generic [ref=e183]:
+            - generic [ref=e189]:
+              - paragraph [ref=e190]: Telemetry
+              - heading "Actions" [level=2] [ref=e191]
+            - generic [ref=e192]:
+              - generic [ref=e194]:
+                - generic [ref=e195]:
+                  - paragraph [ref=e196]: Build progress
+                  - paragraph [ref=e197]: 0%
+                - paragraph [ref=e211]: DISCOVERY
+              - generic [ref=e212]:
+                - paragraph [ref=e215]: Agent snapshot
+                - generic [ref=e217]:
+                  - generic [ref=e219]: Name
+                  - generic [ref=e222]: Role
+                  - generic [ref=e225]: Tone
+                  - generic [ref=e228]: Tools
+                  - generic [ref=e231]: Instructions
+              - generic [ref=e233]:
+                - paragraph [ref=e236]: Pre-deploy preview
+                - paragraph [ref=e238]: Test your agent as an end user before exporting.
+                - button "Open preview" [disabled]:
+                  - img
+                  - text: Open preview
+                - paragraph [ref=e239]: Needs name · role · instructions
+              - generic [ref=e240]:
+                - paragraph [ref=e243]: Export bundle
+                - generic [ref=e245]:
+                  - generic [ref=e246]:
+                    - img [ref=e247]
+                    - text: .json
+                  - generic [ref=e252]:
+                    - img [ref=e253]
+                    - text: .md
+                  - generic [ref=e256]:
+                    - img [ref=e257]
+                    - text: .md
+                - button "Download bundle" [disabled]:
+                  - img
+                  - text: Download bundle
+                - paragraph [ref=e260]: Awaiting spec data
+  - button "Open Next.js Dev Tools" [ref=e310] [cursor=pointer]:
+    - img [ref=e311]
+  - alert [ref=e314]

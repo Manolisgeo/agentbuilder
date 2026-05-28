@@ -75,9 +75,12 @@ async function buildPackageJson(spec: AgentSpec, plan: ConnectorSlot[]) {
   };
 }
 
+export type DeployTarget = "local" | "railway";
+
 export async function generateAgentFiles(
   spec: AgentSpec,
-  plan: ConnectorSlot[]
+  plan: ConnectorSlot[],
+  target: DeployTarget = "local"
 ): Promise<Record<string, string>> {
   const [serverMjs, dockerfile, dockerignore] = await Promise.all([
     fs.readFile(path.join(TEMPLATE_DIR, "server.mjs"), "utf8"),
@@ -101,7 +104,7 @@ export async function generateAgentFiles(
     })),
   };
 
-  return {
+  const files: Record<string, string> = {
     "server.mjs": serverMjs,
     "public/index.html": indexHtml,
     Dockerfile: dockerfile,
@@ -110,4 +113,19 @@ export async function generateAgentFiles(
     "agent.json": JSON.stringify(spec, null, 2),
     "package.json": JSON.stringify(await buildPackageJson(spec, plan), null, 2),
   };
+
+  // Railway builds the Dockerfile directly; this makes the target explicit.
+  if (target === "railway") {
+    files["railway.json"] = JSON.stringify(
+      {
+        $schema: "https://railway.app/railway.schema.json",
+        build: { builder: "DOCKERFILE", dockerfilePath: "Dockerfile" },
+        deploy: { restartPolicyType: "ON_FAILURE", restartPolicyMaxRetries: 3 },
+      },
+      null,
+      2
+    );
+  }
+
+  return files;
 }

@@ -40,6 +40,10 @@ export async function POST(req: Request) {
       ignoreIncompleteToolCalls: true,
     });
 
+    // Track whether a clarifyUser call actually succeeded so stopWhen
+    // doesn't halt on a failed/schema-rejected call.
+    let clarifySucceeded = false;
+
     const stream = createUIMessageStream<SwarmUIMessage>({
       execute: async ({ writer }) => {
         const getSpec = () => currentSpec;
@@ -51,7 +55,8 @@ export async function POST(req: Request) {
           writer,
           buildPhase,
           getSpec,
-          setSpec
+          setSpec,
+          () => { clarifySucceeded = true; }
         );
 
         const result = streamText({
@@ -61,17 +66,43 @@ export async function POST(req: Request) {
           tools,
           maxRetries: 5,
           stopWhen: ({ steps }) => {
-            const clarifyFired = steps.some((s) =>
-              s.toolCalls.some((tc) => tc.toolName === "clarifyUser")
-            );
-            return clarifyFired || steps.length >= 30;
+            return clarifySucceeded || steps.length >= 30;
           },
-          onFinish: () => {
+          onStepFinish: ({ toolCalls, toolResults }) => {
+            // Surface any tool-level errors as visible text so the UI never silently hangs.
+            for (let i = 0; i < toolCalls.length; i++) {
+              const call = toolCalls[i];
+              const result = toolResults?.[i];
+              if (
+                result &&
+                typeof result === "object" &&
+                "result" in result &&
+                typeof result.result === "object" &&
+                result.result !== null &&
+                "success" in result.result &&
+                result.result.success === false &&
+                "error" in result.result
+              ) {
+                console.error(
+                  `[chat] Tool "${call.toolName}" failed:`,
+                  result.result.error
+                );
+              }
+            }
+          },
+          onFinish: ({ finishReason }) => {
             if (buildPhase === "building") {
               writer.write({
                 type: "data-agentSpec",
                 id: "agent-spec",
                 data: currentSpec,
+              });
+            }
+            // If the model was cut off by length or a tool error, append a recovery hint.
+            if (finishReason === "length" || finishReason === "error") {
+              writer.write({
+                type: "text",
+                text: `\n\n> ⚠️ Build stopped early (reason: ${finishReason}). You can ask me to continue from where I left off, or click Stop and retry.`,
               });
             }
           },

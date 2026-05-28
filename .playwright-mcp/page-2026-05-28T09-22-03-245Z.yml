@@ -1,0 +1,154 @@
+- generic [ref=e2]:
+  - complementary [ref=e3]:
+    - img [ref=e7]
+    - navigation [ref=e9]:
+      - link "Builder" [ref=e10] [cursor=pointer]:
+        - /url: /
+        - img [ref=e13]
+        - generic: Builder
+      - link "Agents" [ref=e16] [cursor=pointer]:
+        - /url: /agents
+        - img [ref=e18]
+        - generic: Agents
+      - button "Workflows" [ref=e21]:
+        - img [ref=e23]
+        - generic: Workflows
+      - button "Export" [ref=e27]:
+        - img [ref=e29]
+        - generic: Export
+    - generic [ref=e32]:
+      - button "Settings" [ref=e33]:
+        - img [ref=e34]
+      - img [ref=e39]
+  - generic [ref=e43]:
+    - banner [ref=e44]:
+      - generic [ref=e45]:
+        - generic [ref=e47]:
+          - generic [ref=e48]: Swarm
+          - generic [ref=e50]: Workspace
+          - generic [ref=e52]: Agent builder
+        - generic [ref=e53]:
+          - generic [ref=e54]:
+            - generic [ref=e56]: DISCOVERY
+            - generic [ref=e57]: 0%
+          - button "Command palette" [ref=e58]:
+            - img [ref=e59]
+            - generic [ref=e61]: Quick actions
+            - generic [ref=e62]: ⌘K
+      - heading "Build AI agents that work for you" [level=1] [ref=e64]
+    - main [ref=e65]:
+      - generic [ref=e67]:
+        - generic [ref=e69]:
+          - generic [ref=e70]:
+            - generic [ref=e73]:
+              - paragraph [ref=e74]: Conversation
+              - heading "Builder" [level=2] [ref=e75]
+            - generic [ref=e76]: Discovery
+          - generic [ref=e80]:
+            - generic [ref=e81]:
+              - paragraph [ref=e83]: Let's design your agent together
+              - paragraph [ref=e84]: I can research topics, create a build plan, and assemble your agent architecture — no need to keep saying “continue.”
+            - generic [ref=e85]:
+              - paragraph [ref=e86]: Quick starts
+              - generic [ref=e87]:
+                - button "Gmail digest Build a Gmail Hourly Summary Agent that reads my unread emails, summarizes them with priority tags, and sends a digest to my inbox." [ref=e88]:
+                  - img [ref=e90]
+                  - generic [ref=e93]:
+                    - paragraph [ref=e94]: Gmail digest
+                    - paragraph [ref=e95]: Build a Gmail Hourly Summary Agent that reads my unread emails, summarizes them with priority tags, and sends a digest to my inbox.
+                  - img [ref=e96]
+                - button "Research assistant Build me a research assistant that searches the web and summarizes findings." [ref=e98]:
+                  - img [ref=e100]
+                  - generic [ref=e103]:
+                    - paragraph [ref=e104]: Research assistant
+                    - paragraph [ref=e105]: Build me a research assistant that searches the web and summarizes findings.
+                  - img [ref=e106]
+                - button "Customer support Create a customer support agent with a professional, empathetic tone." [ref=e108]:
+                  - img [ref=e110]
+                  - generic [ref=e112]:
+                    - paragraph [ref=e113]: Customer support
+                    - paragraph [ref=e114]: Create a customer support agent with a professional, empathetic tone.
+                  - img [ref=e115]
+                - button "Daily briefings I need an agent that monitors news and sends concise daily briefings." [ref=e117]:
+                  - img [ref=e119]
+                  - generic [ref=e122]:
+                    - paragraph [ref=e123]: Daily briefings
+                    - paragraph [ref=e124]: I need an agent that monitors news and sends concise daily briefings.
+                  - img [ref=e125]
+          - generic [ref=e129]:
+            - textbox "Describe your agent, ask for research, or request a plan…" [ref=e130]
+            - generic [ref=e131]:
+              - generic [ref=e132]:
+                - img [ref=e133]
+                - generic [ref=e136]:
+                  - generic [ref=e137]: Enter
+                  - text: to send
+                  - generic [ref=e138]: ⇧
+                  - generic [ref=e139]: ↵
+                  - text: for newline
+              - button "Send message" [disabled] [ref=e140]:
+                - img [ref=e141]
+        - separator "Resize panel" [ref=e143]
+        - generic [ref=e150]:
+          - generic [ref=e151]:
+            - button "Canvas" [ref=e153]:
+              - img [ref=e154]
+              - text: Canvas
+            - button "Preview" [disabled] [ref=e159]:
+              - img [ref=e160]
+              - text: Preview
+          - generic [ref=e164]:
+            - generic [ref=e165]:
+              - generic [ref=e166]:
+                - img [ref=e168]
+                - generic [ref=e173]: Workflow canvas
+              - button "Fit canvas to view" [ref=e175]:
+                - img [ref=e176]
+            - generic:
+              - generic:
+                - paragraph: Your agent architecture will appear here
+                - paragraph: Describe your agent in chat — nodes will connect as the spec is assembled.
+            - application [ref=e182]:
+              - img
+        - separator "Resize panel" [ref=e186]
+        - generic [ref=e193]:
+          - generic [ref=e199]:
+            - paragraph [ref=e200]: Telemetry
+            - heading "Actions" [level=2] [ref=e201]
+          - generic [ref=e202]:
+            - generic [ref=e204]:
+              - generic [ref=e205]:
+                - paragraph [ref=e206]: Build progress
+                - paragraph [ref=e207]: 0%
+              - paragraph [ref=e221]: DISCOVERY
+            - generic [ref=e222]:
+              - paragraph [ref=e225]: Agent snapshot
+              - generic [ref=e227]:
+                - generic [ref=e229]: Name
+                - generic [ref=e232]: Role
+                - generic [ref=e235]: Tone
+                - generic [ref=e238]: Tools
+                - generic [ref=e241]: Instructions
+            - generic [ref=e243]:
+              - paragraph [ref=e246]: Pre-deploy preview
+              - paragraph [ref=e248]: Test your agent as an end user before exporting.
+              - button "Open preview" [disabled]:
+                - img
+                - text: Open preview
+              - paragraph [ref=e249]: Needs name · role · instructions
+            - generic [ref=e250]:
+              - paragraph [ref=e253]: Export bundle
+              - generic [ref=e255]:
+                - generic [ref=e256]:
+                  - img [ref=e257]
+                  - text: .json
+                - generic [ref=e262]:
+                  - img [ref=e263]
+                  - text: .md
+                - generic [ref=e266]:
+                  - img [ref=e267]
+                  - text: .md
+              - button "Download bundle" [disabled]:
+                - img
+                - text: Download bundle
+              - paragraph [ref=e270]: Awaiting spec data

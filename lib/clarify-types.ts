@@ -14,7 +14,7 @@ export const clarifyQuestionSchema = z.object({
 
 export const clarifyBlockSchema = z.object({
   context: z.string().optional(),
-  questions: z.array(clarifyQuestionSchema).min(1).max(5),
+  questions: z.array(clarifyQuestionSchema).min(1).max(8),
 });
 
 export type ClarifyQuestion = z.infer<typeof clarifyQuestionSchema>;

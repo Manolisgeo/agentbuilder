@@ -59,6 +59,7 @@ const researchSchema = z.object({
 });
 
 type ToolWriter = UIMessageStreamWriter<SwarmUIMessage>;
+type OnClarifySuccess = () => void;
 
 function emitSpec(writer: ToolWriter, spec: AgentSpec) {
   writer.write({
@@ -104,7 +105,7 @@ async function runSafeTool<T extends Record<string, unknown>>(
   }
 }
 
-function sharedTools(writer: ToolWriter, getSpec: () => AgentSpec) {
+function sharedTools(writer: ToolWriter, getSpec: () => AgentSpec, onClarifySuccess?: OnClarifySuccess) {
   return {
     clarifyUser: {
       description:
@@ -117,6 +118,7 @@ function sharedTools(writer: ToolWriter, getSpec: () => AgentSpec) {
             id: `clarify-${Date.now()}`,
             data: block,
           });
+          onClarifySuccess?.();
           return { sent: true, questionCount: block.questions.length };
         }),
     },
@@ -215,10 +217,11 @@ Be factual and practical. If uncertain, say so.`,
 function buildingTools(
   writer: ToolWriter,
   getSpec: () => AgentSpec,
-  setSpec: (s: AgentSpec) => void
+  setSpec: (s: AgentSpec) => void,
+  onClarifySuccess?: OnClarifySuccess
 ) {
   return {
-    ...sharedTools(writer, getSpec),
+    ...sharedTools(writer, getSpec, onClarifySuccess),
     updatePersona: {
       description:
         "Update the persona node (name, role, tone). Use for targeted edits to the agent identity.",
@@ -264,26 +267,38 @@ function buildingTools(
     },
     addTool: {
       description:
-        "Add or update a tool node connected to the persona. Use descriptive types like gmail_read_inbox, gmail_send_digest, slack_send, http_request, web_search, or custom.",
+        "Add or update a tool node connected to the persona. Use descriptive types: gmail_read_inbox, gmail_send_digest, slack_send, http_request, http_api, web_search, file_search, db_query, or custom. For http_request/http_api always supply baseUrl. For file_search supply path (and optionally glob). For db_query supply engine.",
       inputSchema: z.object({
         id: z.string(),
         name: z.string(),
         type: z.string().optional(),
+        baseUrl: z.string().optional().describe("Base URL for http_request / http_api tools"),
+        path: z.string().optional().describe("Absolute folder path for file_search tools"),
+        glob: z.string().optional().describe("File pattern for file_search, e.g. '**/*.pdf'"),
+        engine: z.enum(["postgres", "mysql", "sqlite"]).optional().describe("DB engine for db_query tools"),
       }),
       execute: async ({
         id,
         name,
         type = "web_search",
+        baseUrl,
+        path,
+        glob,
+        engine,
       }: {
         id: string;
         name: string;
         type?: string;
+        baseUrl?: string;
+        path?: string;
+        glob?: string;
+        engine?: "postgres" | "mysql" | "sqlite";
       }) =>
         runSpecMutation(
           writer,
           getSpec,
           setSpec,
-          (spec) => addTool(spec, { id, name, type }),
+          (spec) => addTool(spec, { id, name, type, baseUrl, path, glob, engine }),
           { nodeId: `tool-${id}`, name }
         ),
     },
@@ -504,10 +519,11 @@ export function createChatTools(
   writer: ToolWriter,
   phase: BuildPhase,
   getSpec: () => AgentSpec,
-  setSpec: (s: AgentSpec) => void
+  setSpec: (s: AgentSpec) => void,
+  onClarifySuccess?: OnClarifySuccess
 ) {
   if (phase === "discovery") {
-    return sharedTools(writer, getSpec);
+    return sharedTools(writer, getSpec, onClarifySuccess);
   }
-  return buildingTools(writer, getSpec, setSpec);
+  return buildingTools(writer, getSpec, setSpec, onClarifySuccess);
 }

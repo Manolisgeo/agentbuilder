@@ -90,7 +90,11 @@ export async function POST(req: Request) {
     }
 
     const spec: AgentSpec = parsed.data;
+    // Runtime inputs from the request body are still accepted for programmatic
+    // use, but spec.envVars and server env vars are the authoritative sources.
     const inputs: RuntimeInputs = body.runtime ?? {};
+    const target: "local" | "railway" =
+      body.target === "railway" ? "railway" : "local";
     const slug = agentSlug(spec.name);
     const plan = planConnectors(spec);
 
@@ -102,6 +106,133 @@ export async function POST(req: Request) {
         const log = (line: string) => emit({ type: "log", line });
 
         try {
+          // 1. Generate the bundle (target-aware).
+          log("Generating agent project…");
+          const files = await generateAgentFiles(spec, plan, target);
+          const outDir = path.join(process.cwd(), "deploy-output", slug);
+          await writeFiles(outDir, files);
+          log(`Wrote ${Object.keys(files).length} files to deploy-output/${slug}/`);
+
+          // 2. Runtime config (shared). Local mounts file_search folders; cloud
+          //    targets can't, so we note it instead.
+          const fileMounts: string[] = [];
+          const agentConfig: {
+            slots: Record<string, SlotInput>;
+            searchApiKey?: string;
+          } = {
+            slots: {},
+            // Env var is the authoritative source; body input is a fallback.
+            searchApiKey:
+              process.env.TAVILY_API_KEY ||
+              process.env.SEARCH_API_KEY ||
+              inputs.searchApiKey,
+          };
+
+          // spec.envVars holds secrets collected by the builder during the chat
+          // (via setEnvVar). They are the primary secret source — server env
+          // vars are a global fallback for advanced users.
+          const envVars = spec.envVars ?? {};
+
+          let needsGmail = false;
+          for (const c of plan) {
+            const rt = inputs.slots?.[c.slot] ?? {};
+            if (c.type === "file_search") {
+              // spec path (set by builder) > env fallback > body input
+              const hostPath = c.path || process.env.FILE_SEARCH_PATH || rt.path;
+              if (hostPath && target === "local") {
+                fileMounts.push(
+                  "-v",
+                  `${path.resolve(hostPath)}:/data/${c.slot}:ro`
+                );
+              } else if (!hostPath) {
+                log(
+                  `WARNING: file_search tool "${c.name}" has no folder path — the agent will find nothing.`
+                );
+              } else if (target !== "local") {
+                log(
+                  `NOTE: file_search "${c.name}" mounts a local folder and won't work on cloud targets.`
+                );
+              }
+              agentConfig.slots[c.slot] = {
+                glob: c.glob || process.env.FILE_SEARCH_GLOB || rt.glob,
+              };
+            } else if (c.type === "http_api" || c.type === "http_request") {
+              // baseUrl: spec tool > env fallback
+              // authHeader: spec envVars (set via setEnvVar during build) > env fallback
+              const baseUrl = c.baseUrl || process.env.HTTP_BASE_URL || rt.baseUrl;
+              const authHeader =
+                envVars.HTTP_AUTH_HEADER ||
+                process.env.HTTP_AUTH_HEADER ||
+                rt.authHeader;
+              agentConfig.slots[c.slot] = { baseUrl, authHeader };
+              if (baseUrl) log(`HTTP tool "${c.name}" → ${baseUrl}`);
+            } else if (c.type === "db_query") {
+              const dbUrl =
+                envVars.DATABASE_URL ||
+                process.env.DATABASE_URL ||
+                rt.dbUrl;
+              agentConfig.slots[c.slot] = { dbUrl };
+            } else if (c.type === "slack_send") {
+              const webhookUrl =
+                envVars.SLACK_WEBHOOK_URL ||
+                process.env.SLACK_WEBHOOK_URL ||
+                rt.webhookUrl;
+              agentConfig.slots[c.slot] = { webhookUrl };
+            } else if (
+              c.type === "gmail_read_inbox" ||
+              c.type === "gmail_send_digest"
+            ) {
+              needsGmail = true;
+            }
+          }
+
+          let gmailEnv: Record<string, string> | null = null;
+          if (needsGmail) {
+            const tokens = await readTokens().catch(() => null);
+            const clientId =
+              spec.envVars?.GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID;
+            const clientSecret =
+              spec.envVars?.GOOGLE_CLIENT_SECRET ||
+              process.env.GOOGLE_CLIENT_SECRET;
+            if (tokens && clientId && clientSecret) {
+              gmailEnv = {
+                GMAIL_TOKENS: JSON.stringify(tokens),
+                GOOGLE_CLIENT_ID: clientId,
+                GOOGLE_CLIENT_SECRET: clientSecret,
+              };
+            } else {
+              log(
+                "WARNING: Gmail tool present but no stored OAuth tokens/credentials found — connect Gmail in the builder, then redeploy."
+              );
+            }
+          }
+
+          // 3a. Railway: bundle is ready; the live push runs via the user's CLI.
+          if (target === "railway") {
+            const env: Record<string, string> = {
+              DEEPSEEK_API_KEY: process.env.DEEPSEEK_API_KEY
+                ? "(copy from server)"
+                : "(required)",
+              AGENT_CONFIG: JSON.stringify(agentConfig),
+            };
+            if (agentConfig.searchApiKey) env.TAVILY_API_KEY = "(set in Railway)";
+            if (gmailEnv) Object.assign(env, gmailEnv);
+            log("Railway bundle ready (it builds the Dockerfile).");
+            log(
+              "To go live: `npm i -g @railway/cli`, `railway login`, then run the command below and set the env vars in the Railway dashboard."
+            );
+            emit({
+              type: "prepared",
+              target: "railway",
+              dir: `deploy-output/${slug}`,
+              command: `cd deploy-output/${slug} && railway up`,
+              env,
+            });
+            emit({ type: "done", prepared: true });
+            return;
+          }
+
+          // 3b. Local Docker: build + run.
           const docker = await runStep(
             "docker",
             ["version", "--format", "{{.Server.Version}}"],
@@ -113,18 +244,11 @@ export async function POST(req: Request) {
             );
           }
           log(`Docker ${docker.out.trim()} detected.`);
-
           if (!process.env.DEEPSEEK_API_KEY) {
             log(
               "WARNING: DEEPSEEK_API_KEY is not set on the server — the deployed agent will not be able to answer."
             );
           }
-
-          log("Generating agent project…");
-          const files = await generateAgentFiles(spec, plan);
-          const outDir = path.join(process.cwd(), "deploy-output", slug);
-          await writeFiles(outDir, files);
-          log(`Wrote ${Object.keys(files).length} files to deploy-output/${slug}/`);
 
           const image = `agent-${slug}`;
           log(`Building image ${image} (first build installs deps; may take a minute)…`);
@@ -143,69 +267,14 @@ export async function POST(req: Request) {
           if (process.env.DEEPSEEK_API_KEY) {
             args.push("-e", `DEEPSEEK_API_KEY=${process.env.DEEPSEEK_API_KEY}`);
           }
-
-          const agentConfig: {
-            slots: Record<string, SlotInput>;
-            searchApiKey?: string;
-          } = {
-            slots: {},
-            searchApiKey:
-              inputs.searchApiKey ||
-              process.env.TAVILY_API_KEY ||
-              process.env.SEARCH_API_KEY,
-          };
-
-          let needsGmail = false;
-          for (const c of plan) {
-            const rt = inputs.slots?.[c.slot] ?? {};
-            if (c.type === "file_search") {
-              const hostPath = rt.path || c.path;
-              if (hostPath) {
-                args.push("-v", `${path.resolve(hostPath)}:/data/${c.slot}:ro`);
-              } else {
-                log(
-                  `WARNING: file_search tool "${c.name}" has no folder path — it will find nothing.`
-                );
-              }
-              agentConfig.slots[c.slot] = { glob: rt.glob || c.glob };
-            } else if (c.type === "http_api" || c.type === "http_request") {
-              agentConfig.slots[c.slot] = {
-                baseUrl: rt.baseUrl || c.baseUrl,
-                authHeader: rt.authHeader,
-              };
-            } else if (c.type === "db_query") {
-              agentConfig.slots[c.slot] = { dbUrl: rt.dbUrl };
-            } else if (c.type === "slack_send") {
-              agentConfig.slots[c.slot] = { webhookUrl: rt.webhookUrl };
-            } else if (
-              c.type === "gmail_read_inbox" ||
-              c.type === "gmail_send_digest"
-            ) {
-              needsGmail = true;
-            }
-          }
-
+          args.push(...fileMounts);
           args.push("-e", `AGENT_CONFIG=${JSON.stringify(agentConfig)}`);
-
-          if (needsGmail) {
-            const tokens = await readTokens().catch(() => null);
-            const clientId =
-              spec.envVars?.GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID;
-            const clientSecret =
-              spec.envVars?.GOOGLE_CLIENT_SECRET ||
-              process.env.GOOGLE_CLIENT_SECRET;
-            if (tokens && clientId && clientSecret) {
-              args.push("-e", `GMAIL_TOKENS=${JSON.stringify(tokens)}`);
-              args.push("-e", `GOOGLE_CLIENT_ID=${clientId}`);
-              args.push("-e", `GOOGLE_CLIENT_SECRET=${clientSecret}`);
-              log("Injected Gmail OAuth tokens from the builder's connected account.");
-            } else {
-              log(
-                "WARNING: Gmail tool present but no stored OAuth tokens/credentials found — connect Gmail in the builder, then redeploy."
-              );
+          if (gmailEnv) {
+            for (const [k, v] of Object.entries(gmailEnv)) {
+              args.push("-e", `${k}=${v}`);
             }
+            log("Injected Gmail OAuth tokens from the builder's connected account.");
           }
-
           args.push(image);
 
           log(`Starting container on port ${port}…`);

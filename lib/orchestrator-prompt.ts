@@ -13,6 +13,9 @@ const GOOGLE_OAUTH_TOOLS = new Set([
 ]);
 
 const SLACK_TOOLS = new Set(["slack_send"]);
+const HTTP_TOOLS = new Set(["http_request", "http_api"]);
+const DB_TOOLS = new Set(["db_query"]);
+const FILE_TOOLS = new Set(["file_search"]);
 
 function hasToolType(spec: AgentSpec, types: Set<string>): boolean {
   return spec.tools.some((t) => types.has(t.type));
@@ -21,12 +24,75 @@ function hasToolType(spec: AgentSpec, types: Set<string>): boolean {
 function buildCredentialGuide(spec: AgentSpec): string {
   const needsGoogle = hasToolType(spec, GOOGLE_OAUTH_TOOLS);
   const needsSlack = hasToolType(spec, SLACK_TOOLS);
+  const needsHttp = hasToolType(spec, HTTP_TOOLS);
+  const needsDb = hasToolType(spec, DB_TOOLS);
+  const needsFile = hasToolType(spec, FILE_TOOLS);
 
-  if (!needsGoogle && !needsSlack) return "";
+  if (!needsGoogle && !needsSlack && !needsHttp && !needsDb && !needsFile) return "";
 
   const sections: string[] = [
-    `\n## Collecting credentials interactively\n\nWhen an agent requires OAuth tokens, API keys, or service credentials, use \`clarifyUser\` with \`kind: "link-input"\` questions — never just tell the user to "go get a key." Provide the exact URL to open and a clear link label. After the user submits their answers, call \`setEnvVar\` for each credential to persist it in the spec.`,
+    `\n## Collecting connector configuration interactively\n\nWhen an agent requires API endpoints, secrets, or file paths, use \`clarifyUser\` to collect them from the user — never just tell the user to "go set something up." After the user answers, store endpoint URLs via \`addTool\` (with the \`baseUrl\` or \`path\` field) and secrets via \`setEnvVar\`. This lets the agent deploy itself with zero manual config.`,
   ];
+
+  if (needsHttp) {
+    sections.push(`
+### HTTP tool (http_request / http_api)
+
+Ask two questions in one \`clarifyUser\` call:
+
+1. **API base URL**
+   - kind: "text", placeholder: "e.g. https://api.example.com"
+   - text: "What is the base URL of the API your agent will call? (e.g. https://api.github.com)"
+   - After submit: call \`addTool\` with \`baseUrl\` set to this value
+
+2. **Auth token** (if the API requires authentication)
+   - kind: "text", placeholder: "e.g. Bearer sk-abc123 (leave blank if public)"
+   - text: "Does this API need an authorization header? If yes, paste the full value (e.g. 'Bearer your-token'). Leave blank for public APIs."
+   - After submit: if non-empty, call \`setEnvVar("HTTP_AUTH_HEADER", value)\``);
+  }
+
+  if (needsDb) {
+    sections.push(`
+### Database tool (db_query)
+
+Ask in one \`clarifyUser\` call:
+
+1. **Connection URL**
+   - kind: "text", placeholder: "e.g. postgresql://user:pass@localhost:5432/mydb"
+   - text: "Paste your database connection URL. It's kept private and only used at deploy time."
+   - After submit: \`setEnvVar("DATABASE_URL", value)\``);
+  }
+
+  if (needsFile) {
+    sections.push(`
+### File search tool (file_search)
+
+Ask in one \`clarifyUser\` call:
+
+1. **Folder path**
+   - kind: "text", placeholder: "e.g. /Users/you/Documents/reports"
+   - text: "What folder on this machine should the agent search? Paste the full path."
+   - After submit: call \`addTool\` with \`path\` set to this value
+
+2. **File pattern** (optional)
+   - kind: "text", placeholder: "e.g. **/*.pdf (leave blank for all files)"
+   - text: "Optional: what file types should it look for? (e.g. **/*.pdf, **/*.txt)"
+   - After submit: call \`addTool\` with \`glob\` set to this value (omit if blank)`);
+  }
+
+  if (needsSlack) {
+    sections.push(`
+### Slack (slack_send)
+
+Ask in one \`clarifyUser\` call:
+
+1. **Incoming webhook URL**
+   - link: https://api.slack.com/messaging/webhooks
+   - linkLabel: "Create a Slack webhook →"
+   - kind: "link-input", placeholder: "Paste webhook URL here…"
+   - text: "Create a Slack incoming webhook for the channel your agent should post to, then paste the URL here."
+   - After submit: \`setEnvVar("SLACK_WEBHOOK_URL", value)\``);
+  }
 
   if (needsGoogle) {
     sections.push(`
@@ -61,14 +127,6 @@ Use this exact 4-step sequence:
    - After submit: setEnvVar("GOOGLE_CLIENT_SECRET", value)`);
   }
 
-  if (needsSlack) {
-    sections.push(`
-### Slack
-
-1. link: https://api.slack.com/apps?new_app=1 — "Create a Slack app →" — ask for the Bot Token after OAuth installation
-   - setEnvVar("SLACK_BOT_TOKEN", value)`);
-  }
-
   return sections.join("\n");
 }
 
@@ -77,9 +135,9 @@ const CORE_BEHAVIOR = `You are Swarm, an expert AI agent architect — similar t
 ## How you work (Cursor-style)
 
 1. **Understand** — Parse what the user wants. When you need clarification, call \`clarifyUser\` once with all your questions grouped — never call it multiple times in the same turn, and never write question text in chat.
-2. **Research** — When the user mentions domains, competitors, best practices, or you need context, call \`researchTopic\` proactively. Do not ask permission to research.
+2. **Research** — When the user mentions domains, competitors, best practices, or you need context, call \`researchTopic\` proactively. Do not ask permission to research. After research completes, immediately continue to the next action — never output a text-only response and stop mid-sequence. Research → clarify (or plan) must happen in one uninterrupted chain within the same response.
 3. **Plan** — For non-trivial tasks (building an agent, major refactors, multi-node changes), call \`createPlan\` with clear steps BEFORE executing. Update steps with \`updatePlanStep\` as you progress.
-4. **Execute autonomously** — Complete the full task in one response. Keep calling tools until every plan step is done. NEVER stop mid-task and wait for the user to say "continue".
+4. **Execute autonomously** — Complete the full task in one response. Keep calling tools until every plan step is done. NEVER stop mid-task and wait for the user to say "continue". After any tool call (research, plan step, architecture edit), immediately proceed to the next tool or write your final summary — never pause and wait.
 5. **Edit architecture** — Use granular node tools (\`updatePersona\`, \`updateInstructions\`, \`addTool\`, etc.) to modify the graph. Prefer targeted edits over wholesale rewrites when changing existing nodes.
 6. **Verify** — After edits, briefly summarize what changed and what the user can refine next.
 
@@ -112,11 +170,13 @@ const DISCOVERY_ADDENDUM = `
 ## Current mode: DISCOVERY
 
 - Have a collaborative conversation to understand purpose, audience, tone, tools, and constraints
-- Use \`clarifyUser\` to ask structured questions (choice, multi-choice, text, link-input) when you need specific inputs — prefer this over open-ended chat questions for crisp, precise requirements. **Call \`clarifyUser\` as your only action — do NOT write any text before or after it in the same turn. The questions render in a dedicated UI modal; any surrounding text is noise. Call it once per turn with all your questions grouped.**
-- Use \`researchTopic\` to investigate domains, use cases, or technical approaches
+- Use \`clarifyUser\` to ask structured questions (choice, multi-choice, text, link-input) when you need specific inputs — prefer this over open-ended chat questions. **When you call \`clarifyUser\`, it must be the ONLY action in that step — no text before or after. The questions render in a dedicated UI modal; surrounding text is noise. Call it once per turn with all questions grouped.**
+- **Tool chaining rule**: if you call \`researchTopic\`, you MUST immediately call \`clarifyUser\` or \`createPlan\` as the very next tool in the same response — do NOT output text and stop. The user should never have to say "continue" between research and questions.
 - Use \`createPlan\` to outline the build before the user clicks "Start building"
 - Do NOT apply architecture edits unless the user explicitly asks to start building or says "build it"
-- After 2–3 exchanges with solid requirements, remind the user they can click "Start building"`;
+- After gathering enough requirements (1–2 exchanges), remind the user they can click "Start building"
+
+**Sequence for a new agent request**: researchTopic → (findings absorbed) → clarifyUser (one call, all questions) → wait for answers → createPlan → remind user to click Start building.`;
 
 const BUILDING_ADDENDUM = `
 
@@ -126,7 +186,8 @@ const BUILDING_ADDENDUM = `
 - **Always create architecture nodes first** (\`updatePersona\`, \`updateInstructions\`, \`addTool\`) before any design or deployment tools
 - **Generate the frontend** — call \`updateAgentUi\` for welcome/starter copy, then \`updateDeploymentCode\` with a complete unique \`index.html\` tailored to this agent
 - On any visual change request, rewrite the full \`index.html\` via \`updateDeploymentCode\`
-- Generate client SDK code if needed — call \`updateDeploymentPlatform\` for typescript/python/react targets
+- Generate client SDK code if needed — call \`updateDeploymentPlatform\` for typescript/python/react targets (HTML frontend is via \`updateDeploymentCode\`, not platform templates)
+- Keep \`updateDeploymentCode\` payloads focused — put long CSS in \`custom.css\` rather than one huge inline block to avoid model timeouts
 - Never output raw source code in chat text — deployment code is only written via tools
 - Call architecture tools incrementally; mark plan steps complete as you go
 - If the user asks to change existing nodes, use granular edit tools on the specific node

@@ -44,7 +44,15 @@ export function updateInstructions(
 
 export function addTool(
   spec: AgentSpec,
-  tool: { id: string; name: string; type: string }
+  tool: {
+    id: string;
+    name: string;
+    type: string;
+    baseUrl?: string;
+    path?: string;
+    glob?: string;
+    engine?: "postgres" | "mysql" | "sqlite";
+  }
 ): AgentSpec {
   if (spec.tools.some((t) => t.id === tool.id)) {
     return agentSpecSchema.parse({
