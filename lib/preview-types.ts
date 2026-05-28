@@ -1,4 +1,5 @@
 import type { UIMessage } from "ai";
+import type { MemoryWriteEvent } from "@/lib/swarm-memory";
 
 export type WebSearchSource = {
   title: string;
@@ -42,5 +43,6 @@ export type PreviewUIMessage = UIMessage<
   never,
   {
     orchestration: OrchestrationState;
+    memoryState: MemoryWriteEvent;
   }
 >;

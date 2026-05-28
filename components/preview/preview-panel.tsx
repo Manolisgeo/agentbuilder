@@ -20,9 +20,11 @@ import type {
   OrchestrationStep,
   PreviewUIMessage,
 } from "@/lib/preview-types";
+import type { MemoryWriteEvent } from "@/lib/swarm-memory";
 
 interface PreviewPanelProps {
   agentSpec: AgentSpec;
+  onMemoryUpdate?: (event: MemoryWriteEvent) => void;
 }
 
 const DEFAULT_STARTERS = [
@@ -31,14 +33,16 @@ const DEFAULT_STARTERS = [
   "What are the latest developments I should know about?",
 ];
 
-export function PreviewPanel({ agentSpec }: PreviewPanelProps) {
+export function PreviewPanel({ agentSpec, onMemoryUpdate }: PreviewPanelProps) {
   const [input, setInput] = useState("");
   const [orchestrationSteps, setOrchestrationSteps] = useState<
     OrchestrationStep[]
   >([]);
   const agentSpecRef = useRef(agentSpec);
+  const onMemoryUpdateRef = useRef(onMemoryUpdate);
   const scrollAnchorRef = useRef<HTMLDivElement>(null);
   agentSpecRef.current = agentSpec;
+  onMemoryUpdateRef.current = onMemoryUpdate;
 
   const isSwarm = Boolean(agentSpec.agents?.length);
   const hasLiveSearch = hasWebSearchTool(agentSpec);
@@ -59,6 +63,9 @@ export function PreviewPanel({ agentSpec }: PreviewPanelProps) {
       onData: (dataPart) => {
         if (dataPart.type === "data-orchestration") {
           setOrchestrationSteps(dataPart.data.steps);
+        }
+        if (dataPart.type === "data-memoryState") {
+          onMemoryUpdateRef.current?.(dataPart.data);
         }
       },
     });

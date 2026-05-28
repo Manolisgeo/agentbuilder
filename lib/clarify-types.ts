@@ -3,10 +3,13 @@ import { z } from "zod";
 export const clarifyQuestionSchema = z.object({
   id: z.string(),
   text: z.string(),
-  kind: z.enum(["text", "textarea", "choice", "multi-choice", "confirm"]),
+  kind: z.enum(["text", "textarea", "choice", "multi-choice", "confirm", "link-input"]),
   options: z.array(z.string()).optional(),
   placeholder: z.string().optional(),
   required: z.boolean().default(true),
+  // for link-input kind: a URL to open + an optional label for the link button
+  link: z.string().url().optional(),
+  linkLabel: z.string().optional(),
 });
 
 export const clarifyBlockSchema = z.object({

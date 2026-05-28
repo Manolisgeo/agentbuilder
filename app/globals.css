@@ -672,6 +672,16 @@ kbd {
   animation: node-glow-pulse 1.8s ease-in-out 1;
 }
 
+.memory-node-flash {
+  animation: memory-flash 0.6s ease-out both;
+}
+
+@keyframes memory-flash {
+  0% { box-shadow: 0 0 0 0 rgba(245,158,11,0.6); }
+  50% { box-shadow: 0 0 24px 8px rgba(245,158,11,0.3); }
+  100% { box-shadow: 0 0 0 0 rgba(245,158,11,0); }
+}
+
 .cyan-scan-flash::after {
   content: "";
   position: absolute;

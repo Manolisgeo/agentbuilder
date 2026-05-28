@@ -7,6 +7,7 @@ import { PreviewPanel } from "@/components/preview/preview-panel";
 import { isAgentPreviewReady } from "@/lib/agent-prompt";
 import type { AgentSpec } from "@/lib/agent-spec";
 import type { BuildPhase } from "@/lib/build-phase";
+import type { MemoryWriteEvent, SwarmMemoryState } from "@/lib/swarm-memory";
 
 export type CenterView = "canvas" | "preview";
 
@@ -17,6 +18,8 @@ interface CenterPanelProps {
   isBuilding?: boolean;
   buildProgress?: number;
   buildPhase?: BuildPhase;
+  memoryState?: SwarmMemoryState;
+  onMemoryUpdate?: (event: MemoryWriteEvent) => void;
 }
 
 export function CenterPanel({
@@ -26,6 +29,8 @@ export function CenterPanel({
   isBuilding,
   buildProgress,
   buildPhase,
+  memoryState,
+  onMemoryUpdate,
 }: CenterPanelProps) {
   const canPreview = isAgentPreviewReady(agentSpec);
 
@@ -84,9 +89,14 @@ export function CenterPanel({
             isBuilding={isBuilding}
             buildProgress={buildProgress}
             buildPhase={buildPhase}
+            memoryState={memoryState}
           />
         ) : (
-          <PreviewPanel key={JSON.stringify(agentSpec)} agentSpec={agentSpec} />
+          <PreviewPanel
+            key={JSON.stringify(agentSpec)}
+            agentSpec={agentSpec}
+            onMemoryUpdate={onMemoryUpdate}
+          />
         )}
       </div>
     </div>

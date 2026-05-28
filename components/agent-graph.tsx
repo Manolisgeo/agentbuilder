@@ -22,12 +22,14 @@ import {
   isAgentSpecEmpty,
   type AgentSpec,
 } from "@/lib/agent-spec";
+import type { SwarmMemoryState } from "@/lib/swarm-memory";
 
 interface AgentGraphProps {
   spec: AgentSpec;
   isBuilding?: boolean;
   buildProgress?: number;
   buildPhase?: "discovery" | "building";
+  memoryState?: SwarmMemoryState;
 }
 
 const nodeTypes = {
@@ -80,7 +82,9 @@ const PLACEHOLDER_EDGES: Edge[] = [
 
 function buildGraphFromSpec(
   spec: AgentSpec,
-  seenNodeIds: Set<string>
+  seenNodeIds: Set<string>,
+  memoryState?: SwarmMemoryState,
+  updatedMemoryKeys?: Set<string>
 ): { nodes: Node<BoardNodeData>[]; edges: Edge[]; newCount: number } {
   const nodes: Node<BoardNodeData>[] = [];
   const edges: Edge[] = [];
@@ -143,7 +147,7 @@ function buildGraphFromSpec(
       position: { x: 80 + index * 280, y: 420 },
       data: {
         label: tool.name,
-        subtitle: tool.type.replace("_", " "),
+        subtitle: tool.type.replace(/_/g, " "),
         kind: "tool",
         isNew,
         animDelay: isNew ? 100 + index * 80 : undefined,
@@ -182,6 +186,8 @@ function buildGraphFromSpec(
           kind: "swarm",
           isNew,
           animDelay: isNew ? 100 + index * 80 : undefined,
+          memoryReads: agent.memory?.reads?.length ? agent.memory.reads : undefined,
+          memoryWrites: agent.memory?.writes?.length ? agent.memory.writes : undefined,
         },
       });
 
@@ -215,6 +221,94 @@ function buildGraphFromSpec(
     });
   }
 
+  if (spec.envVars && Object.keys(spec.envVars).length > 0) {
+    const credId = "credentials";
+    const isNew = !seenNodeIds.has(credId);
+    if (isNew) newCount++;
+    const keys = Object.keys(spec.envVars);
+    nodes.push({
+      id: credId,
+      type: "boardNode",
+      position: { x: 420, y: 420 },
+      data: {
+        label: "Credentials",
+        subtitle: `${keys.length} env var${keys.length > 1 ? "s" : ""} collected`,
+        detail: keys.map((k) => `${k} = ••••••`).join("\n"),
+        kind: "credentials",
+        isNew,
+        animDelay: isNew ? 200 : undefined,
+      },
+    });
+    edges.push({
+      id: "e-persona-credentials",
+      source: personaId,
+      target: credId,
+      animated: !isNew,
+      className: isNew ? "edge-draw" : undefined,
+      markerEnd: { type: MarkerType.ArrowClosed, color: "#f59e0b" },
+      style: { stroke: "#f59e0b", strokeWidth: 1.5, opacity: 0.6, strokeDasharray: "4 3" },
+    });
+  }
+
+  if (spec.swarmMemory?.length) {
+    spec.swarmMemory.forEach((mk, index) => {
+      const memId = `memory-${mk.key}`;
+      const isNew = !seenNodeIds.has(memId);
+      if (isNew) newCount++;
+      const value = memoryState?.[mk.key];
+      const displayValue =
+        value === undefined || value === null
+          ? "(empty)"
+          : typeof value === "string"
+            ? value.slice(0, 60) + (value.length > 60 ? "…" : "")
+            : JSON.stringify(value).slice(0, 60);
+
+      nodes.push({
+        id: memId,
+        type: "boardNode",
+        position: { x: 80 + index * 300, y: 860 },
+        data: {
+          label: mk.key,
+          subtitle: mk.type,
+          detail: displayValue,
+          kind: "memory",
+          isNew,
+          animDelay: isNew ? 100 + index * 80 : undefined,
+          isUpdated: updatedMemoryKeys?.has(mk.key) ?? false,
+        },
+      });
+
+      if (spec.agents) {
+        spec.agents.forEach((agent) => {
+          if (agent.memory?.writes?.includes(mk.key)) {
+            edges.push({
+              id: `e-write-${agent.id}-${mk.key}`,
+              source: `swarm-${agent.id}`,
+              target: memId,
+              markerEnd: { type: MarkerType.ArrowClosed, color: "#f59e0b" },
+              style: { stroke: "#f59e0b", strokeWidth: 1.75, opacity: 0.75 },
+            });
+          }
+          if (agent.memory?.reads?.includes(mk.key)) {
+            edges.push({
+              id: `e-read-${mk.key}-${agent.id}`,
+              source: memId,
+              target: `swarm-${agent.id}`,
+              markerEnd: { type: MarkerType.ArrowClosed, color: "#f59e0b" },
+              style: {
+                stroke: "#f59e0b",
+                strokeWidth: 1.5,
+                opacity: 0.6,
+                strokeDasharray: "5 4",
+              },
+              label: "reads",
+            });
+          }
+        });
+      }
+    });
+  }
+
   return { nodes, edges, newCount };
 }
 
@@ -223,10 +317,13 @@ function BoardCanvas({
   isBuilding,
   buildProgress,
   buildPhase,
+  memoryState,
 }: AgentGraphProps) {
   const seenNodeIdsRef = useRef<Set<string>>(new Set());
   const prevSpecKeyRef = useRef("");
   const [pulseKey, setPulseKey] = useState(0);
+  const [updatedMemoryKeys, setUpdatedMemoryKeys] = useState<Set<string>>(new Set());
+  const prevMemoryStateRef = useRef<SwarmMemoryState | undefined>(undefined);
   const { fitView } = useReactFlow();
 
   const validSpec = useMemo(() => {
@@ -236,14 +333,32 @@ function BoardCanvas({
 
   const isEmpty = isAgentSpecEmpty(validSpec);
 
+  useEffect(() => {
+    if (!memoryState) return;
+    const prev = prevMemoryStateRef.current ?? {};
+    const changed = Object.keys(memoryState).filter(
+      (k) => memoryState[k] !== prev[k]
+    );
+    if (changed.length === 0) return;
+    prevMemoryStateRef.current = memoryState;
+    setUpdatedMemoryKeys(new Set(changed));
+    const timer = setTimeout(() => setUpdatedMemoryKeys(new Set()), 600);
+    return () => clearTimeout(timer);
+  }, [memoryState]);
+
   const { nodes, edges, newCount } = useMemo(() => {
     if (isEmpty) {
       return { nodes: PLACEHOLDER_NODES, edges: PLACEHOLDER_EDGES, newCount: 0 };
     }
-    const graph = buildGraphFromSpec(validSpec, seenNodeIdsRef.current);
+    const graph = buildGraphFromSpec(
+      validSpec,
+      seenNodeIdsRef.current,
+      memoryState,
+      updatedMemoryKeys
+    );
     graph.nodes.forEach((node) => seenNodeIdsRef.current.add(node.id));
     return graph;
-  }, [validSpec, isEmpty]);
+  }, [validSpec, isEmpty, memoryState, updatedMemoryKeys]);
 
   useEffect(() => {
     if (isEmpty) {
@@ -369,3 +484,5 @@ export function AgentGraph(props: AgentGraphProps) {
     </HudPanel>
   );
 }
+
+export type { AgentGraphProps };

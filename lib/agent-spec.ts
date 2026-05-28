@@ -1,9 +1,28 @@
 import { z } from "zod";
 
+export const TOOL_TYPES = [
+  "web_search",
+  "gmail_read_inbox",
+  "gmail_summarizer",
+  "gmail_send_digest",
+  "slack_send",
+  "http_request",
+  "custom",
+] as const;
+
+export type ToolType = (typeof TOOL_TYPES)[number];
+
 export const toolSchema = z.object({
   id: z.string(),
   name: z.string(),
-  type: z.literal("web_search"),
+  // accepts known types and any future custom strings
+  type: z.union([z.enum(TOOL_TYPES), z.string()]),
+});
+
+export const swarmMemoryKeySchema = z.object({
+  key: z.string(),
+  type: z.enum(["string", "object", "array"]),
+  description: z.string(),
 });
 
 export const swarmAgentSchema = z.object({
@@ -11,6 +30,12 @@ export const swarmAgentSchema = z.object({
   role: z.string(),
   instructions: z.string(),
   dependsOn: z.array(z.string()),
+  memory: z
+    .object({
+      reads: z.array(z.string()).default([]),
+      writes: z.array(z.string()).default([]),
+    })
+    .optional(),
 });
 
 export const agentSpecSchema = z.object({
@@ -22,6 +47,9 @@ export const agentSpecSchema = z.object({
   instructions: z.string(),
   tools: z.array(toolSchema),
   agents: z.array(swarmAgentSchema).optional(),
+  swarmMemory: z.array(swarmMemoryKeySchema).optional(),
+  // collected credentials / env vars (key → value, e.g. GOOGLE_CLIENT_ID)
+  envVars: z.record(z.string(), z.string()).optional(),
 });
 
 export const agentSpecPatchSchema = agentSpecSchema.partial().extend({
@@ -31,11 +59,22 @@ export const agentSpecPatchSchema = agentSpecSchema.partial().extend({
       tone: z.string().optional(),
     })
     .optional(),
+  agents: z
+    .array(
+      swarmAgentSchema.partial().extend({
+        id: z.string(),
+        dependsOn: z.array(z.string()).optional(),
+      })
+    )
+    .optional(),
+  swarmMemory: z.array(swarmMemoryKeySchema).optional(),
+  envVars: z.record(z.string(), z.string()).optional(),
 });
 
 export type AgentSpec = z.infer<typeof agentSpecSchema>;
 export type AgentSpecPatch = z.infer<typeof agentSpecPatchSchema>;
 export type SwarmAgent = z.infer<typeof swarmAgentSchema>;
+export type SwarmMemoryKey = z.infer<typeof swarmMemoryKeySchema>;
 
 export const defaultAgentSpec: AgentSpec = {
   name: "Untitled Agent",
@@ -50,6 +89,17 @@ export function mergeAgentSpec(
   current: AgentSpec,
   patch: AgentSpecPatch
 ): AgentSpec {
+  let mergedMemory = current.swarmMemory;
+  if (patch.swarmMemory) {
+    const existingByKey = new Map(
+      (current.swarmMemory ?? []).map((k) => [k.key, k])
+    );
+    for (const key of patch.swarmMemory) {
+      existingByKey.set(key.key, key);
+    }
+    mergedMemory = Array.from(existingByKey.values());
+  }
+
   const merged: AgentSpec = {
     name: patch.name ?? current.name,
     persona: {
@@ -58,7 +108,13 @@ export function mergeAgentSpec(
     },
     instructions: patch.instructions ?? current.instructions,
     tools: patch.tools ?? current.tools,
-    agents: patch.agents ?? current.agents,
+    agents: patch.agents
+      ? (patch.agents as AgentSpec["agents"])
+      : current.agents,
+    swarmMemory: mergedMemory,
+    envVars: patch.envVars
+      ? { ...(current.envVars ?? {}), ...patch.envVars }
+      : current.envVars,
   };
 
   return agentSpecSchema.parse(merged);

@@ -11,7 +11,9 @@ export function computeBuildProgress(spec: AgentSpec): number {
   if (spec.persona.tone) filled++;
   if (spec.instructions) filled++;
   if (spec.tools.length > 0) filled++;
-  return Math.round((filled / total) * 100);
+  const base = Math.round((filled / total) * 100);
+  const memoryBonus = spec.swarmMemory?.length ? 5 : 0;
+  return Math.min(100, base + memoryBonus);
 }
 
 export function getBuildStages(spec: AgentSpec): Record<BuildStage, boolean> {

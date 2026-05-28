@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/button";
 import { HudError } from "@/components/hud/hud-error";
 import { HudPanel } from "@/components/hud/hud-panel";
 import { SegmentedProgress } from "@/components/hud/segmented-progress";
+import { MemoryPanel } from "@/components/memory-panel";
 import { downloadAgentBundle } from "@/lib/export";
 import { isAgentPreviewReady } from "@/lib/agent-prompt";
 import { isAgentSpecEmpty, type AgentSpec } from "@/lib/agent-spec";
 import { cn } from "@/lib/utils";
+import type { SwarmMemoryState } from "@/lib/swarm-memory";
 
 interface ActionsPanelProps {
   agentSpec: AgentSpec;
@@ -19,6 +21,9 @@ interface ActionsPanelProps {
   statusLabel?: string;
   isBuilding?: boolean;
   onPreview?: () => void;
+  memoryState?: SwarmMemoryState;
+  lastWrittenBy?: Record<string, string>;
+  latestWrittenKeys?: Set<string>;
 }
 
 function SpecRow({ label, value }: { label: string; value: string }) {
@@ -55,6 +60,9 @@ export function ActionsPanel({
   statusLabel = "AWAITING INPUT",
   isBuilding = false,
   onPreview,
+  memoryState = {},
+  lastWrittenBy = {},
+  latestWrittenKeys,
 }: ActionsPanelProps) {
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -132,6 +140,16 @@ export function ActionsPanel({
             />
           </div>
         </div>
+
+        {/* Shared Memory */}
+        {agentSpec.swarmMemory && agentSpec.swarmMemory.length > 0 && (
+          <MemoryPanel
+            keys={agentSpec.swarmMemory}
+            state={memoryState}
+            lastWrittenBy={lastWrittenBy}
+            latestWrittenKeys={latestWrittenKeys}
+          />
+        )}
 
         {/* Preview */}
         <div className="rounded-xl border border-white/[0.06] bg-gradient-to-b from-white/[0.03] to-transparent p-3.5">

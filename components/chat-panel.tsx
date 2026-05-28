@@ -6,13 +6,14 @@ import {
   ArrowRight,
   Hammer,
   Headphones,
+  Mail,
   Newspaper,
   Search,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ChatComposer } from "@/components/chat/chat-composer";
 import { ChatMessage } from "@/components/chat/chat-message";
-import { ClarifyCard } from "@/components/clarify-card";
+import { ClarifyModal } from "@/components/clarify-modal";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { HudError } from "@/components/hud/hud-error";
@@ -32,6 +33,12 @@ interface ChatPanelProps {
 }
 
 const STARTER_PROMPTS = [
+  {
+    icon: Mail,
+    label: "Gmail digest",
+    text: "Build a Gmail Hourly Summary Agent that reads my unread emails, summarizes them with priority tags, and sends a digest to my inbox.",
+    accent: "from-primary/20 to-primary/5 text-primary",
+  },
   {
     icon: Search,
     label: "Research assistant",
@@ -183,6 +190,7 @@ export function ChatPanel({
   }
 
   return (
+    <>
     <HudPanel tier={1} className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="flex items-center justify-between gap-3 border-b border-white/[0.05] px-4 py-3.5">
         <div className="flex items-center gap-2.5">
@@ -270,12 +278,7 @@ export function ChatPanel({
             />
           ))}
 
-          {clarifyBlock && (
-            <ClarifyCard
-              block={clarifyBlock}
-              onSubmit={handleClarifySubmit}
-            />
-          )}
+          {/* ClarifyModal is rendered via portal over the full page */}
 
           {error && <HudError message={error.message} />}
           <div ref={scrollAnchorRef} />
@@ -303,14 +306,17 @@ export function ChatPanel({
           onStop={stop}
           isBusy={isBusy || clarifyPending}
           placeholder={
-            clarifyPending
-              ? "Answer the questions above to continue…"
-              : isDiscovery
+            isDiscovery
               ? "Describe your agent, ask for research, or request a plan…"
               : "Refine nodes, add tools, or restructure the architecture…"
           }
         />
       </div>
     </HudPanel>
+
+    {clarifyBlock && (
+      <ClarifyModal block={clarifyBlock} onSubmit={handleClarifySubmit} />
+    )}
+    </>
   );
 }

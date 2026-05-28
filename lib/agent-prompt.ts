@@ -1,6 +1,11 @@
-import { defaultAgentSpec, isAgentSpecEmpty, type AgentSpec } from "./agent-spec";
+import {
+  defaultAgentSpec,
+  isAgentSpecEmpty,
+  type AgentSpec,
+} from "./agent-spec";
+import { resolveMemoryTemplates, type SwarmMemoryState } from "./swarm-memory";
 
-type RuntimePromptOptions = {
+export type RuntimePromptOptions = {
   liveTools?: boolean;
   swarmMode?: boolean;
 };
@@ -19,7 +24,7 @@ export function buildAgentRuntimePrompt(
   let toolsSection = "";
   if (spec.tools.length > 0) {
     const capabilityLines = spec.tools
-      .map((tool) => `- ${tool.name} (${tool.type.replace("_", " ")})`)
+      .map((tool) => `- ${tool.name} (${tool.type.replace(/_/g, " ")})`)
       .join("\n");
 
     if (liveTools && hasSearch) {
@@ -56,7 +61,10 @@ ${toolsSection}${swarmSection}
 Stay fully in character. You are speaking with an end user — not a developer. Be helpful, concise, and true to your defined tone.`;
 }
 
-export function buildOrchestratorRuntimePrompt(spec: AgentSpec): string {
+export function buildOrchestratorRuntimePrompt(
+  spec: AgentSpec,
+  memoryState?: SwarmMemoryState
+): string {
   const subAgents = spec.agents ?? [];
   const subAgentList =
     subAgents.length > 0
@@ -71,6 +79,8 @@ export function buildOrchestratorRuntimePrompt(spec: AgentSpec): string {
   const searchNote = hasWebSearchTool(spec)
     ? "Live web search is available — set needsWebSearch when fresh web data would help."
     : "Web search is not configured for this agent.";
+
+  const memSection = buildMemorySection(spec, memoryState);
 
   return `You are the routing orchestrator for "${spec.name}".
 
@@ -88,22 +98,67 @@ ${subAgentList}
 - Use subAgentId null only for simple greetings, clarifications, or when no sub-agent fits.
 - ${searchNote}
 - searchQuery should be a focused query string when needsWebSearch is true.
-- routingMessage should read like a live status update (e.g. "Routing to Research Agent…").`;
+- routingMessage should read like a live status update (e.g. "Routing to Research Agent…").${memSection}`;
 }
 
-export function buildSubAgentRuntimePrompt(agent: {
-  role: string;
-  instructions: string;
-}): string {
+export function buildSubAgentRuntimePrompt(
+  agent: { role: string; instructions: string },
+  memoryState?: SwarmMemoryState,
+  agentMemory?: { reads: string[]; writes: string[] },
+  spec?: AgentSpec
+): string {
+  const resolvedInstructions = memoryState
+    ? resolveMemoryTemplates(agent.instructions, memoryState)
+    : agent.instructions;
+  const memSection =
+    spec && memoryState ? buildMemorySection(spec, memoryState, agentMemory) : "";
+
   return `You are a specialist sub-agent in a coordinated swarm.
 
 ## Role
 ${agent.role}
 
 ## Instructions
-${agent.instructions}
+${resolvedInstructions}${memSection}
 
 Produce focused specialist output for the orchestrator. Do not address the end user directly — your output will be synthesized by the orchestrator.`;
+}
+
+function buildMemorySection(
+  spec: AgentSpec,
+  state: SwarmMemoryState | undefined,
+  agentMemory?: { reads: string[]; writes: string[] }
+): string {
+  if (!spec.swarmMemory?.length || !state) return "";
+  if (!agentMemory && Object.keys(state).length === 0) return "";
+
+  const reads = agentMemory?.reads ?? [];
+  const writes = agentMemory?.writes ?? [];
+
+  const lines = spec.swarmMemory.map((mk) => {
+    const value = state[mk.key];
+    const displayValue =
+      value === undefined || value === null
+        ? "(empty)"
+        : typeof value === "string"
+          ? `"${value.slice(0, 120)}${value.length > 120 ? "…" : ""}"`
+          : JSON.stringify(value).slice(0, 120);
+
+    const access = reads.includes(mk.key)
+      ? " [you READ this]"
+      : writes.includes(mk.key)
+        ? " [you WRITE this]"
+        : "";
+
+    return `- ${mk.key} (${mk.type}): ${displayValue}${access}`;
+  });
+
+  const writeInstruction =
+    writes.length > 0
+      ? "\n\nWhen you write to memory, call the writeMemory tool with key-value pairs for the keys you own."
+      : "";
+
+  return `\n\n## Shared Memory (current state)\n${lines.join("\n")}${writeInstruction}`;
 }
 
 export function isAgentPreviewReady(spec: AgentSpec): boolean {

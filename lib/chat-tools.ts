@@ -5,6 +5,7 @@ import {
   addTool,
   removeSubAgent,
   removeTool,
+  setEnvVar,
   updateInstructions,
   updatePersona,
   updateSubAgent,
@@ -12,6 +13,7 @@ import {
 import {
   agentSpecPatchSchema,
   mergeAgentSpec,
+  swarmMemoryKeySchema,
   type AgentSpec,
   type AgentSpecPatch,
 } from "@/lib/agent-spec";
@@ -198,11 +200,12 @@ function buildingTools(
       },
     },
     addTool: {
-      description: "Add or update a tool node connected to the persona.",
+      description:
+        "Add or update a tool node connected to the persona. Use descriptive types like gmail_read_inbox, gmail_send_digest, slack_send, http_request, web_search, or custom.",
       inputSchema: z.object({
         id: z.string(),
         name: z.string(),
-        type: z.literal("web_search").optional(),
+        type: z.string().optional(),
       }),
       execute: async ({
         id,
@@ -211,7 +214,7 @@ function buildingTools(
       }: {
         id: string;
         name: string;
-        type?: "web_search";
+        type?: string;
       }) => {
         const next = addTool(getSpec(), { id, name, type });
         setSpec(next);
@@ -293,6 +296,33 @@ function buildingTools(
         setSpec(next);
         emitSpec(writer, next);
         return { success: true, name: next.name };
+      },
+    },
+    setEnvVar: {
+      description:
+        "Store a collected credential or environment variable (e.g. GOOGLE_CLIENT_ID) into the agent spec. Call this after the user provides a value via clarifyUser link-input.",
+      inputSchema: z.object({
+        key: z.string().describe("Env var name, e.g. GOOGLE_CLIENT_ID"),
+        value: z.string().describe("The value the user provided"),
+      }),
+      execute: async ({ key, value }: { key: string; value: string }) => {
+        const next = setEnvVar(getSpec(), key, value);
+        setSpec(next);
+        emitSpec(writer, next);
+        return { success: true, key };
+      },
+    },
+    updateMemoryKeys: {
+      description:
+        "Define or update shared memory keys for the swarm. Call when you add a new agent that produces or consumes data that other agents need. Use camelCase, descriptive nouns (e.g. 'researchFindings', 'draftText'). After defining keys, set reads/writes on each agent using addSubAgent or updateSubAgent.",
+      inputSchema: z.object({
+        keys: z.array(swarmMemoryKeySchema),
+      }),
+      execute: async ({ keys }: { keys: z.infer<typeof swarmMemoryKeySchema>[] }) => {
+        const next = mergeAgentSpec(getSpec(), { swarmMemory: keys });
+        setSpec(next);
+        emitSpec(writer, next);
+        return { success: true, keyCount: keys.length };
       },
     },
   };

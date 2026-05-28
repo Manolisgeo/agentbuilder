@@ -30,12 +30,56 @@ When editing existing architecture, read the current state via \`readArchitectur
 - When research completes, synthesize key findings for the user
 - In discovery, focus on understanding + research + planning; start building when the user is ready or asks`;
 
+const CREDENTIAL_GUIDE = `
+## Collecting credentials interactively
+
+When an agent requires OAuth tokens, API keys, or service credentials, use \`clarifyUser\` with \`kind: "link-input"\` questions — never just tell the user to "go get a key." Provide the exact URL to open and a clear link label. After the user submits their answers, call \`setEnvVar\` for each credential to persist it in the spec.
+
+### Google OAuth2 (Gmail, Calendar, Drive, etc.)
+
+Use this exact 4-step sequence:
+
+1. **Create / select a project**
+   - link: https://console.cloud.google.com/projectcreate
+   - linkLabel: "Create a Google Cloud project →"
+   - text: "First, create (or select) a Google Cloud project. Click the link, fill in a project name, then paste the project name here so I can reference it."
+   - kind: "text", placeholder: "e.g. My Gmail Agent"
+
+2. **Enable the Gmail API**
+   - link: https://console.cloud.google.com/apis/library/gmail.googleapis.com
+   - linkLabel: "Enable Gmail API →"
+   - text: "Enable the Gmail API for your project. Click the link and hit Enable, then confirm here."
+   - kind: "confirm"
+
+3. **Create OAuth credentials (Client ID)**
+   - link: https://console.cloud.google.com/apis/credentials/oauthclient
+   - linkLabel: "Create OAuth 2.0 credentials →"
+   - text: "Create OAuth 2.0 credentials. Select 'Desktop app', name it anything, click Create — then paste your Client ID below."
+   - kind: "link-input", placeholder: "Paste Client ID here…"
+   - After submit: setEnvVar("GOOGLE_CLIENT_ID", value)
+
+4. **Client Secret**
+   - link: https://console.cloud.google.com/apis/credentials
+   - linkLabel: "Open credentials page →"
+   - text: "On the same credentials page, expand your new OAuth client and paste the Client Secret below."
+   - kind: "link-input", placeholder: "Paste Client Secret here…"
+   - After submit: setEnvVar("GOOGLE_CLIENT_SECRET", value)
+
+### Slack
+
+1. link: https://api.slack.com/apps?new_app=1 — "Create a Slack app →" — ask for the Bot Token after OAuth installation
+   - setEnvVar("SLACK_BOT_TOKEN", value)
+
+### Generic API key
+
+Use a single link-input question pointing to the service's API key page, then call setEnvVar with the appropriate name.`;
+
 const DISCOVERY_ADDENDUM = `
 
 ## Current mode: DISCOVERY
 
 - Have a collaborative conversation to understand purpose, audience, tone, tools, and constraints
-- Use \`clarifyUser\` to ask structured questions (choice, multi-choice, text) when you need specific inputs — prefer this over open-ended chat questions for crisp, precise requirements
+- Use \`clarifyUser\` to ask structured questions (choice, multi-choice, text, link-input) when you need specific inputs — prefer this over open-ended chat questions for crisp, precise requirements
 - Use \`researchTopic\` to investigate domains, use cases, or technical approaches
 - Use \`createPlan\` to outline the build before the user clicks "Start building"
 - Do NOT apply architecture edits unless the user explicitly asks to start building or says "build it"
@@ -49,7 +93,9 @@ const BUILDING_ADDENDUM = `
 - Call architecture tools incrementally; mark plan steps complete as you go
 - If the user asks to change existing nodes, use granular edit tools on the specific node
 - For swarm/multi-agent setups: add sub-agents with \`addSubAgent\`, wire dependencies via \`dependsOn\` (other sub-agent ids)
-- Default to \`web_search\` tool type when research/search capabilities are needed`;
+- Use descriptive tool types that match the integration: gmail_read_inbox, gmail_send_digest, slack_send, http_request, web_search, custom
+- When an agent requires OAuth or API keys, run the credential collection flow (see credential guide) BEFORE or alongside building the architecture — don't skip it
+- When you add a second+ agent, infer which memory keys they share. Call \`updateMemoryKeys\` to define them (camelCase nouns, e.g. "researchFindings", "draftText"), then set \`memory.reads\`/\`memory.writes\` on each agent. Reference memory keys in agent instructions as \`{{memory.keyName}}\`.`;
 
 export function buildOrchestratorPrompt(
   spec: AgentSpec,
@@ -59,7 +105,7 @@ export function buildOrchestratorPrompt(
     phase === "discovery" ? DISCOVERY_ADDENDUM : BUILDING_ADDENDUM;
   const architecture = formatArchitectureContext(spec);
 
-  return `${CORE_BEHAVIOR}${phaseAddendum}
+  return `${CORE_BEHAVIOR}${phaseAddendum}${CREDENTIAL_GUIDE}
 
 ${architecture}`;
 }

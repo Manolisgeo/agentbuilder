@@ -33,7 +33,7 @@ export function updateInstructions(
 
 export function addTool(
   spec: AgentSpec,
-  tool: { id: string; name: string; type: "web_search" }
+  tool: { id: string; name: string; type: string }
 ): AgentSpec {
   if (spec.tools.some((t) => t.id === tool.id)) {
     return agentSpecSchema.parse({
@@ -88,5 +88,12 @@ export function removeSubAgent(spec: AgentSpec, id: string): AgentSpec {
   return agentSpecSchema.parse({
     ...spec,
     agents: agents.length > 0 ? agents : undefined,
+  });
+}
+
+export function setEnvVar(spec: AgentSpec, key: string, value: string): AgentSpec {
+  return agentSpecSchema.parse({
+    ...spec,
+    envVars: { ...(spec.envVars ?? {}), [key]: value },
   });
 }

@@ -2,6 +2,7 @@ import type { UIMessage } from "ai";
 import type { AgentSpec } from "./agent-spec";
 import type { ClarifyBlock } from "./clarify-types";
 import type { CodeSpec } from "./codegen-types";
+import type { MemoryWriteEvent } from "./swarm-memory";
 
 export type PlanStepStatus = "pending" | "in_progress" | "completed";
 
@@ -37,6 +38,7 @@ export type SwarmUIMessage = UIMessage<
     planStep: PlanStepUpdate;
     research: ResearchResult;
     clarify: ClarifyBlock;
+    memoryState: MemoryWriteEvent;
   }
 >;
 
@@ -55,6 +57,8 @@ export const TOOL_LABELS: Record<string, { active: string; done: string }> = {
   updateSubAgent: { active: "Updating sub-agent", done: "Sub-agent updated" },
   removeSubAgent: { active: "Removing sub-agent", done: "Sub-agent removed" },
   updateAgentSpec: { active: "Updating agent spec", done: "Spec updated" },
+  updateMemoryKeys: { active: "Defining memory keys", done: "Memory keys set" },
+  setEnvVar: { active: "Saving credential", done: "Credential saved" },
 };
 
 export type CodegenUIMessage = UIMessage<

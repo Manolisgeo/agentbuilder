@@ -19,6 +19,7 @@ import {
   type AgentSpec,
 } from "@/lib/agent-spec";
 import type { BuildPhase } from "@/lib/build-phase";
+import type { MemoryWriteEvent, SwarmMemoryState } from "@/lib/swarm-memory";
 
 export default function Home() {
   const [agentSpec, setAgentSpec] = useState<AgentSpec>(defaultAgentSpec);
@@ -26,9 +27,27 @@ export default function Home() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isBuilding, setIsBuilding] = useState(false);
   const [centerView, setCenterView] = useState<CenterView>("canvas");
+  const [memoryState, setMemoryState] = useState<SwarmMemoryState>({});
+  const [lastWrittenBy, setLastWrittenBy] = useState<Record<string, string>>({});
+  const [latestWrittenKeys, setLatestWrittenKeys] = useState<Set<string>>(new Set());
 
   const handleSpecUpdate = useCallback((spec: AgentSpec) => {
     setAgentSpec(spec);
+  }, []);
+
+  const handleMemoryUpdate = useCallback((event: MemoryWriteEvent) => {
+    setMemoryState(event.state);
+    if (event.writes.length > 0) {
+      setLastWrittenBy((prev) => {
+        const next = { ...prev };
+        for (const w of event.writes) {
+          next[w.key] = w.agentRole;
+        }
+        return next;
+      });
+      setLatestWrittenKeys(new Set(event.writes.map((w) => w.key)));
+      setTimeout(() => setLatestWrittenKeys(new Set()), 1200);
+    }
   }, []);
 
   const buildProgress = useMemo(
@@ -129,6 +148,8 @@ export default function Home() {
                   isBuilding={isBuilding}
                   buildProgress={buildProgress}
                   buildPhase={buildPhase}
+                  memoryState={memoryState}
+                  onMemoryUpdate={handleMemoryUpdate}
                 />
               }
               right={
@@ -140,6 +161,9 @@ export default function Home() {
                   statusLabel={statusLabel}
                   isBuilding={isBuilding}
                   onPreview={() => setCenterView("preview")}
+                  memoryState={memoryState}
+                  lastWrittenBy={lastWrittenBy}
+                  latestWrittenKeys={latestWrittenKeys}
                 />
               }
             />
