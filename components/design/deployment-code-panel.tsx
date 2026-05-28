@@ -62,11 +62,7 @@ export function DeploymentCodePanel({
     const nextFiles = files.map((file) =>
       file.path === currentFile.path ? { ...file, content: draft } : file
     );
-    onSpecUpdate(
-      updateDeploymentFiles(agentSpec, nextFiles, {
-        editedPath: currentFile.path,
-      })
-    );
+    onSpecUpdate(updateDeploymentFiles(agentSpec, nextFiles));
     setEditing(false);
   }
 
@@ -78,8 +74,8 @@ export function DeploymentCodePanel({
   if (files.length === 0) {
     return (
       <p className="text-[11.5px] leading-relaxed text-muted-foreground">
-        Select a deployment platform above to generate starter code in HTML,
-        TypeScript, Python, or React.
+        No deployment files yet. Ask the chat to design your frontend, or select
+        a client SDK platform above.
       </p>
     );
   }

@@ -59,9 +59,9 @@ export const TOOL_LABELS: Record<string, { active: string; done: string }> = {
   updateAgentSpec: { active: "Updating agent spec", done: "Spec updated" },
   updateMemoryKeys: { active: "Defining memory keys", done: "Memory keys set" },
   setEnvVar: { active: "Saving credential", done: "Credential saved" },
-  updateAgentUi: { active: "Designing UI", done: "UI design updated" },
+  updateAgentUi: { active: "Updating UI copy", done: "UI copy updated" },
   updateDeploymentPlatform: { active: "Generating deployment code", done: "Deployment code generated" },
-  updateDeploymentCode: { active: "Updating deployment files", done: "Deployment files updated" },
+  updateDeploymentCode: { active: "Writing frontend", done: "Frontend updated" },
 };
 
 export type CodegenUIMessage = UIMessage<

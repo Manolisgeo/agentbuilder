@@ -23,6 +23,7 @@ import { SegmentedProgress } from "@/components/hud/segmented-progress";
 import { MemoryPanel } from "@/components/memory-panel";
 import { downloadAgentBundle } from "@/lib/export";
 import { isAgentPreviewReady } from "@/lib/agent-prompt";
+import { hasAgentFrontend } from "@/lib/deploy-html";
 import {
   defaultAgentSpec,
   isAgentSpecEmpty,
@@ -107,6 +108,7 @@ export function ActionsPanel({
   const [saveStatus, setSaveStatus] = useState<"idle" | "saved" | "error">("idle");
   const canExport = !isAgentSpecEmpty(agentSpec);
   const canPreview = isAgentPreviewReady(agentSpec);
+  const hasFrontend = hasAgentFrontend(agentSpec);
   const ui = resolveAgentUi(agentSpec.ui);
 
   async function handleSave() {
@@ -334,8 +336,8 @@ export function ActionsPanel({
           <div className="rounded-xl border border-white/[0.06] bg-gradient-to-b from-white/[0.03] to-transparent p-3.5">
             <SectionHeader>Design & deployment</SectionHeader>
             <p className="mb-3 text-[11.5px] leading-relaxed text-muted-foreground">
-              Configure how your agent looks when deployed and choose a code
-              platform.
+              Describe your ideal UI in the chat — each agent gets a unique
+              frontend generated from scratch. Edit code manually below if needed.
             </p>
             <StyleConfigPanel agentSpec={agentSpec} onSpecUpdate={onSpecUpdate} />
             <div className="mt-4 border-t border-white/[0.05] pt-4">
@@ -376,7 +378,9 @@ export function ActionsPanel({
           </Button>
           {!canPreview && (
             <p className="mt-2 text-center font-mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground/70">
-              Needs name · role · instructions
+              {!hasFrontend
+                ? "Needs frontend design · name · role · instructions"
+                : "Needs name · role · instructions"}
             </p>
           )}
         </div>

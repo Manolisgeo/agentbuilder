@@ -51,19 +51,21 @@ export function formatArchitectureContext(spec: AgentSpec): string {
   lines.push(`- addTool / removeTool — tool nodes connected to persona`);
   lines.push(`- addSubAgent / updateSubAgent / removeSubAgent — swarm sub-agents`);
   lines.push(`- updateAgentSpec — bulk patch when many fields change at once`);
-  lines.push(`- updateAgentUi — deployed UI template, layout, theme, welcome message`);
-  lines.push(`- updateDeploymentPlatform — generate HTML/TS/Python/React deployment code`);
-  lines.push(`- updateDeploymentCode — customize deployment source files`);
+  lines.push(`- updateAgentUi — welcome message and starter prompts`);
+  lines.push(`- updateDeploymentCode — write unique HTML frontend (index.html) and other deployment files`);
 
   const ui = resolveAgentUi(spec.ui);
   const deployment = resolveAgentDeployment(spec.deployment);
 
   lines.push("");
   lines.push(`### Deployed UI design`);
-  lines.push(`- Template: ${ui.template}`);
-  lines.push(`- Layout: ${ui.layout}`);
-  lines.push(`- Theme: ${ui.theme.mode} mode, primary ${ui.theme.primaryColor}, font ${ui.theme.fontFamily}`);
-  lines.push(`- Welcome: ${ui.welcomeMessage ?? "(default)"}`);
+  lines.push(
+    `- Frontend: ${deployment.frontendGenerated ? "custom HTML saved" : deployment.files.some((f) => f.path === "index.html") ? "HTML saved" : "not generated yet — use updateDeploymentCode with index.html"}`
+  );
+  if (deployment.lastFrontendInstruction) {
+    lines.push(`- Last design brief: ${deployment.lastFrontendInstruction.slice(0, 200)}${deployment.lastFrontendInstruction.length > 200 ? "…" : ""}`);
+  }
+  lines.push(`- Welcome copy: ${ui.welcomeMessage ?? "(default)"}`);
   if (ui.starterPrompts?.length) {
     lines.push(`- Starter prompts: ${ui.starterPrompts.join(" | ")}`);
   }

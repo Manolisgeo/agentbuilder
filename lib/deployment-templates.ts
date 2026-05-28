@@ -6,18 +6,6 @@ import {
   type DeploymentFile,
   type DeploymentPlatform,
 } from "@/lib/agent-ui";
-import {
-  buildDeployFileBundle,
-  getDeployCustomCss,
-} from "@/lib/deploy-html";
-
-function buildHtmlFiles(spec: AgentSpec): DeploymentFile[] {
-  return buildDeployFileBundle(spec, getDeployCustomCss(spec)).map((file) => ({
-    path: file.path,
-    language: file.language,
-    content: file.content,
-  }));
-}
 
 function buildTypeScriptFile(spec: AgentSpec): DeploymentFile {
   const ui = resolveAgentUi(spec.ui);
@@ -165,7 +153,7 @@ export function AgentWidget() {
         color: theme.mode === "light" ? "#0f172a" : "#f1f5f9",
         borderRadius: "12px",
         overflow: "hidden",
-        maxWidth: ${ui.layout === "embedded" ? "420" : "720"}px,
+        maxWidth: "720px",
         border: "1px solid rgba(255,255,255,0.08)",
       }}
     >
@@ -249,22 +237,22 @@ export function AgentWidget() {
   return { path: "AgentWidget.tsx", language: "tsx", content };
 }
 
+/** Client SDK files only — HTML frontend is LLM-generated via generateAgentFrontend. */
 export function generateDeploymentFiles(
   spec: AgentSpec,
   platform: DeploymentPlatform
 ): DeploymentFile[] {
-  const htmlFiles = buildHtmlFiles(spec);
   switch (platform) {
     case "html":
-      return htmlFiles;
+      return [];
     case "typescript":
-      return [buildTypeScriptFile(spec), ...htmlFiles];
+      return [buildTypeScriptFile(spec)];
     case "python":
-      return [buildPythonFile(spec), ...htmlFiles];
+      return [buildPythonFile(spec)];
     case "react":
-      return [buildReactFile(spec), buildTypeScriptFile(spec), ...htmlFiles];
+      return [buildReactFile(spec), buildTypeScriptFile(spec)];
     default:
-      return htmlFiles;
+      return [];
   }
 }
 
@@ -274,17 +262,22 @@ export function syncDeployment(
 ): AgentDeployment {
   const current = resolveAgentDeployment(spec.deployment);
   const targetPlatform = platform ?? current.platform;
-  const preservedCustomCss = getDeployCustomCss({ ...spec, deployment: current });
-  const generated = generateDeploymentFiles(spec, targetPlatform).map((file) =>
-    file.path === "custom.css" ? { ...file, content: preservedCustomCss } : file
-  );
-
+  const preservedHtml = current.files.find((f) => f.path === "index.html");
+  const clientFiles = generateDeploymentFiles(spec, targetPlatform);
   const customFiles = current.files.filter(
-    (f) => !generated.some((g) => g.path === f.path)
+    (f) =>
+      f.path !== "index.html" &&
+      !clientFiles.some((g) => g.path === f.path)
   );
 
   return {
     platform: targetPlatform,
-    files: [...generated, ...customFiles],
+    frontendGenerated: current.frontendGenerated,
+    lastFrontendInstruction: current.lastFrontendInstruction,
+    files: [
+      ...(preservedHtml ? [preservedHtml] : []),
+      ...clientFiles,
+      ...customFiles.filter((f) => !clientFiles.some((g) => g.path === f.path)),
+    ],
   };
 }

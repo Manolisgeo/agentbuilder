@@ -13,8 +13,8 @@ import {
   type AgentUi,
   type DeploymentPlatform,
 } from "@/lib/agent-ui";
-import { syncDeployment } from "@/lib/deployment-templates";
-import { buildDeployHtml, getDeployCustomCss } from "@/lib/deploy-html";
+import { generateDeploymentFiles } from "@/lib/deployment-templates";
+import { injectChatRuntime } from "@/lib/frontend-runtime";
 
 export function updatePersona(
   spec: AgentSpec,
@@ -109,6 +109,7 @@ export function setEnvVar(spec: AgentSpec, key: string, value: string): AgentSpe
   });
 }
 
+/** Updates UI metadata only — does NOT regenerate HTML (use generateAgentFrontend for that). */
 export function updateAgentUi(
   spec: AgentSpec,
   patch: Partial<AgentUi> & { theme?: Partial<AgentUi["theme"]> }
@@ -119,54 +120,65 @@ export function updateAgentUi(
     ...patch,
     theme: { ...current.theme, ...patch.theme },
   });
-  const next = agentSpecSchema.parse({ ...spec, ui: nextUi });
-  return agentSpecSchema.parse({
-    ...next,
-    deployment: syncDeployment(next),
-  });
+  return agentSpecSchema.parse({ ...spec, ui: nextUi });
 }
 
 export function updateDeploymentPlatform(
   spec: AgentSpec,
   platform: DeploymentPlatform
 ): AgentSpec {
+  const current = spec.deployment ?? defaultAgentDeployment;
+  const preservedHtml = current.files.find((f) => f.path === "index.html");
+  const clientFiles = generateDeploymentFiles(spec, platform).filter(
+    (f) => f.path !== "index.html" && f.path !== "theme.css" && f.path !== "custom.css"
+  );
+  const files = [
+    ...(preservedHtml ? [preservedHtml] : []),
+    ...clientFiles,
+    ...current.files.filter(
+      (f) =>
+        f.path !== "index.html" &&
+        !clientFiles.some((c) => c.path === f.path)
+    ),
+  ];
+
   return agentSpecSchema.parse({
     ...spec,
-    deployment: syncDeployment(spec, platform),
+    deployment: agentDeploymentSchema.parse({
+      ...current,
+      platform,
+      files,
+    }),
   });
 }
 
 export function updateDeploymentFiles(
   spec: AgentSpec,
   files: AgentDeployment["files"],
-  options?: { editedPath?: string }
+  options?: { designInstruction?: string }
 ): AgentSpec {
   const current = spec.deployment ?? defaultAgentDeployment;
-  const customCss =
-    files.find((f) => f.path === "custom.css")?.content ?? getDeployCustomCss(spec);
-  const shouldRegenHtml = options?.editedPath !== "index.html";
 
-  let mergedFiles = files;
-  if (shouldRegenHtml) {
-    const htmlContent = buildDeployHtml(spec, { mode: "runtime", customCss });
-    const hasIndex = files.some((f) => f.path === "index.html");
-    mergedFiles = hasIndex
-      ? files.map((file) =>
-          file.path === "index.html"
-            ? { ...file, language: "html" as const, content: htmlContent }
-            : file
-        )
-      : [
-          ...files,
-          { path: "index.html", language: "html" as const, content: htmlContent },
-        ];
-  }
+  const processed = files.map((file) => {
+    if (file.path === "index.html" && file.content.trim()) {
+      return { ...file, content: injectChatRuntime(file.content) };
+    }
+    return file;
+  });
+
+  const hasHtml = processed.some(
+    (f) => f.path === "index.html" && f.content.trim()
+  );
 
   return agentSpecSchema.parse({
     ...spec,
     deployment: agentDeploymentSchema.parse({
       ...current,
-      files: mergedFiles,
+      files: processed,
+      ...(hasHtml ? { frontendGenerated: true } : {}),
+      ...(options?.designInstruction
+        ? { lastFrontendInstruction: options.designInstruction }
+        : {}),
     }),
   });
 }

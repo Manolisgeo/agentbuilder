@@ -19,6 +19,9 @@ export const looseAgentUiPatchSchema = z.object({
   template: z.string().optional(),
   layout: z.string().optional(),
   welcomeMessage: z.string().optional(),
+  welcomeHint: z.string().optional(),
+  heroTitle: z.string().optional(),
+  heroSubtitle: z.string().optional(),
   starterPrompts: z.array(z.string()).optional(),
   theme: z
     .object({
@@ -126,6 +129,9 @@ export function parseAgentUiPatchInput(
       ? pickEnum(raw.layout, UI_LAYOUTS, "fullscreen")
       : undefined,
     welcomeMessage: raw.welcomeMessage,
+    welcomeHint: raw.welcomeHint,
+    heroTitle: raw.heroTitle,
+    heroSubtitle: raw.heroSubtitle,
     starterPrompts: raw.starterPrompts,
     theme,
   };

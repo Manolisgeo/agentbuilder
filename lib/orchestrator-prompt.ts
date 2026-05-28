@@ -1,6 +1,10 @@
 import type { BuildPhase } from "@/lib/build-phase";
 import { formatArchitectureContext } from "@/lib/graph-context";
 import type { AgentSpec } from "@/lib/agent-spec";
+import {
+  FRONTEND_DESIGN_GUIDE,
+  buildFrontendDesignContext,
+} from "@/lib/frontend-design-guide";
 
 const GOOGLE_OAUTH_TOOLS = new Set([
   "gmail_read_inbox",
@@ -92,17 +96,12 @@ When editing existing architecture, read the current state via \`readArchitectur
 
 ## Design & deployment
 
-After configuring the agent's behavior, design how it looks when deployed:
-- Use \`updateAgentUi\` to set template (chat/widget/landing), layout, welcome message, starter prompts, and theme (colors, fonts, border radius, light/dark mode)
-- Use \`updateDeploymentPlatform\` to generate starter code for html, typescript, python, or react
-- Use \`updateDeploymentCode\` to customize or extend deployment source files
-- Ask about brand colors, layout preferences, and target platform during discovery when relevant
-- **Never paste deployment source code** (HTML, CSS, JS, TS, Python, React) in chat — use the deployment tools only; users view code in the Design tab and Actions panel
+${FRONTEND_DESIGN_GUIDE}
 
 ## Response style
 
 - Be concise but complete — explain what you're doing as you work
-- Describe design and deployment changes in plain language only (e.g. "I've generated an HTML chat widget with your brand colors")
+- Describe design and deployment changes in plain language only (e.g. "I've generated a unique dark UI tailored to your finance agent")
 - Show plan progress inline when executing multi-step work
 - When research completes, synthesize key findings for the user
 - In discovery, focus on understanding + research + planning; start building when the user is ready or asks`;
@@ -125,8 +124,9 @@ const BUILDING_ADDENDUM = `
 
 - Execute the full build autonomously — persona → instructions → tools → sub-agents as needed
 - **Always create architecture nodes first** (\`updatePersona\`, \`updateInstructions\`, \`addTool\`) before any design or deployment tools
-- Design the deployed UI — set template, layout, theme, and welcome message with \`updateAgentUi\`
-- Generate deployment code — call \`updateDeploymentPlatform\` for the user's target (html/typescript/python/react), then refine with \`updateDeploymentCode\` if needed
+- **Generate the frontend** — call \`updateAgentUi\` for welcome/starter copy, then \`updateDeploymentCode\` with a complete unique \`index.html\` tailored to this agent
+- On any visual change request, rewrite the full \`index.html\` via \`updateDeploymentCode\`
+- Generate client SDK code if needed — call \`updateDeploymentPlatform\` for typescript/python/react targets
 - Never output raw source code in chat text — deployment code is only written via tools
 - Call architecture tools incrementally; mark plan steps complete as you go
 - If the user asks to change existing nodes, use granular edit tools on the specific node
@@ -146,5 +146,5 @@ export function buildOrchestratorPrompt(
 
   return `${CORE_BEHAVIOR}${phaseAddendum}${credentialGuide}
 
-${architecture}`;
+${architecture}${phase === "building" ? `\n\n${buildFrontendDesignContext(spec)}` : ""}`;
 }

@@ -3,6 +3,7 @@ import {
   isAgentSpecEmpty,
   type AgentSpec,
 } from "./agent-spec";
+import { hasAgentFrontend } from "./deploy-html";
 import { resolveMemoryTemplates, type SwarmMemoryState } from "./swarm-memory";
 
 export type RuntimePromptOptions = {
@@ -178,7 +179,8 @@ export function isAgentPreviewReady(spec: AgentSpec): boolean {
     !isAgentSpecEmpty(spec) &&
     spec.name !== defaultAgentSpec.name &&
     Boolean(spec.persona.role) &&
-    Boolean(spec.instructions)
+    Boolean(spec.instructions) &&
+    hasAgentFrontend(spec)
   );
 }
 

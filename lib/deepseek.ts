@@ -1,8 +1,10 @@
-import { createOpenAI } from "@ai-sdk/openai";
-
-const deepseek = createOpenAI({
-  baseURL: "https://api.deepseek.com",
-  apiKey: process.env.DEEPSEEK_API_KEY,
-});
-
-export const deepseekChat = deepseek.chat("deepseek-chat");
+export {
+  deepseekChat,
+  openaiChat,
+  getChatModel,
+  hasLlmFallback,
+  normalizeLlmError,
+  withLlmRetry,
+  isRetryableLlmError,
+  delay,
+} from "./llm";

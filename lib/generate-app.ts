@@ -2,7 +2,8 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { AgentSpec } from "./agent-spec";
 import { agentSlug, type ConnectorSlot } from "./connectors";
-import { buildDeployHtml, getDeployCustomCss } from "./deploy-html";
+import { getAgentFrontendHtml } from "./frontend-codegen";
+import { FRONTEND_PLACEHOLDER_HTML, injectChatRuntime } from "./frontend-runtime";
 
 export { agentSlug, planConnectors, type ConnectorSlot } from "./connectors";
 
@@ -84,19 +85,10 @@ export async function generateAgentFiles(
     fs.readFile(path.join(TEMPLATE_DIR, "dockerignore"), "utf8"),
   ]);
 
-  const customCss = getDeployCustomCss(spec);
-  const savedHtml = spec.deployment?.files.find((f) => f.path === "index.html")?.content;
-  let indexHtml: string;
-  try {
-    indexHtml =
-      savedHtml ?? buildDeployHtml(spec, { mode: "runtime", customCss });
-  } catch (error) {
-    throw new Error(
-      `Failed to generate deployment HTML: ${
-        error instanceof Error ? error.message : String(error)
-      }`
-    );
-  }
+  const savedHtml = getAgentFrontendHtml(spec);
+  const indexHtml = savedHtml
+    ? injectChatRuntime(savedHtml)
+    : injectChatRuntime(FRONTEND_PLACEHOLDER_HTML);
 
   const config = {
     name: spec.name,

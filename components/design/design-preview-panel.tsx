@@ -1,30 +1,70 @@
 "use client";
 
-import { Palette } from "lucide-react";
-import { useMemo } from "react";
+import { MousePointer2, Palette } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { AgentFrontendFrame } from "@/components/design/agent-frontend-frame";
+import { DesignElementChat } from "@/components/design/design-element-chat";
+import { ResizableDesignSplit } from "@/components/design/resizable-design-split";
 import { HudPanel } from "@/components/hud/hud-panel";
-import { buildDeployHtml, getDeployCustomCss } from "@/lib/deploy-html";
-import { getPlatformLabel, resolveAgentUi } from "@/lib/agent-ui";
+import { hasAgentFrontend } from "@/lib/deploy-html";
+import { getPlatformLabel } from "@/lib/agent-ui";
 import type { AgentSpec } from "@/lib/agent-spec";
+import {
+  DESIGN_HIGHLIGHT_MESSAGE,
+  DESIGN_SELECT_MESSAGE,
+  type DesignSelection,
+} from "@/lib/design-inspector";
 
 interface DesignPreviewPanelProps {
   agentSpec: AgentSpec;
+  onSpecUpdate?: (spec: AgentSpec) => void;
 }
 
-export function DesignPreviewPanel({ agentSpec }: DesignPreviewPanelProps) {
-  const ui = resolveAgentUi(agentSpec.ui);
+export function DesignPreviewPanel({
+  agentSpec,
+  onSpecUpdate,
+}: DesignPreviewPanelProps) {
   const platform = agentSpec.deployment?.platform ?? "html";
+  const hasFrontend = hasAgentFrontend(agentSpec);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [selection, setSelection] = useState<DesignSelection | null>(null);
 
-  const previewHtml = useMemo(() => {
-    const savedHtml = agentSpec.deployment?.files.find(
-      (file) => file.path === "index.html"
-    )?.content;
-    if (savedHtml) return savedHtml;
-    return buildDeployHtml(agentSpec, {
-      mode: "static",
-      customCss: getDeployCustomCss(agentSpec),
-    });
-  }, [agentSpec]);
+  const htmlContent = agentSpec.deployment?.files.find(
+    (f) => f.path === "index.html"
+  )?.content;
+
+  const handleMessage = useCallback((event: MessageEvent) => {
+    if (event.data?.type !== DESIGN_SELECT_MESSAGE) return;
+    const sel = event.data.selection as DesignSelection | undefined;
+    if (sel?.id) setSelection(sel);
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, [handleMessage]);
+
+  useEffect(() => {
+    setSelection(null);
+  }, [htmlContent]);
+
+  useEffect(() => {
+    if (!selection?.id || !iframeRef.current?.contentWindow) return;
+    iframeRef.current.contentWindow.postMessage(
+      { type: DESIGN_HIGHLIGHT_MESSAGE, id: selection.id },
+      "*"
+    );
+  }, [selection?.id, htmlContent]);
+
+  const previewFrame = (
+    <AgentFrontendFrame
+      agentSpec={agentSpec}
+      mode="design"
+      iframeRef={iframeRef}
+      title={`${agentSpec.name} design`}
+      className="h-full"
+    />
+  );
 
   return (
     <HudPanel
@@ -36,30 +76,36 @@ export function DesignPreviewPanel({ agentSpec }: DesignPreviewPanelProps) {
         <div className="flex items-center gap-2.5">
           <Palette className="size-4 text-system" strokeWidth={1.75} />
           <div>
-            <p className="hud-label leading-none">Design preview</p>
-            <p className="mt-1 text-[12px] text-muted-foreground">
-              Pixel-perfect match with local deployment
+            <p className="hud-label leading-none">Design</p>
+            <p className="mt-1 flex items-center gap-1.5 text-[12px] text-muted-foreground">
+              <MousePointer2 className="size-3" />
+              {hasFrontend
+                ? "Click to select · drag the divider to resize the edit panel"
+                : "Ask the chat to generate your agent's UI"}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="rounded-full border border-white/[0.08] bg-white/[0.02] px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.12em] text-muted-foreground">
-            {ui.layout}
-          </span>
-          <span className="rounded-full border border-system/30 bg-system/10 px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.12em] text-system">
-            {getPlatformLabel(platform)}
-          </span>
-        </div>
+        <span className="rounded-full border border-system/30 bg-system/10 px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.12em] text-system">
+          {getPlatformLabel(platform)}
+        </span>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-hidden rounded-b-xl bg-[#07060a]">
-        <iframe
-          title={`${agentSpec.name} design preview`}
-          srcDoc={previewHtml}
-          className="h-full w-full border-0"
-          sandbox=""
+      {onSpecUpdate && hasFrontend ? (
+        <ResizableDesignSplit
+          className="min-h-0 flex-1"
+          top={previewFrame}
+          bottom={
+            <DesignElementChat
+              agentSpec={agentSpec}
+              selection={selection}
+              onClearSelection={() => setSelection(null)}
+              onSpecUpdate={onSpecUpdate}
+            />
+          }
         />
-      </div>
+      ) : (
+        previewFrame
+      )}
     </HudPanel>
   );
 }

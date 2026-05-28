@@ -13,15 +13,18 @@ import {
 import type { BuildPhase } from "@/lib/build-phase";
 import type { SwarmUIMessage } from "@/lib/chat-types";
 import { buildOrchestratorPrompt } from "@/lib/orchestrator-prompt";
-import { deepseekChat } from "@/lib/deepseek";
+import { getChatModel, normalizeLlmError } from "@/lib/deepseek";
 
 export const maxDuration = 120;
 
 export async function POST(req: Request) {
   try {
-    if (!process.env.DEEPSEEK_API_KEY) {
+    if (!process.env.DEEPSEEK_API_KEY && !process.env.OPENAI_API_KEY) {
       return Response.json(
-        { error: "DEEPSEEK_API_KEY is not set. Add it to .env.local." },
+        {
+          error:
+            "No LLM API key configured. Set DEEPSEEK_API_KEY or OPENAI_API_KEY in .env.local.",
+        },
         { status: 500 }
       );
     }
@@ -52,10 +55,11 @@ export async function POST(req: Request) {
         );
 
         const result = streamText({
-          model: deepseekChat,
+          model: getChatModel(),
           system: buildOrchestratorPrompt(currentSpec, buildPhase),
           messages: modelMessages,
           tools,
+          maxRetries: 5,
           stopWhen: ({ steps }) => {
             const clarifyFired = steps.some((s) =>
               s.toolCalls.some((tc) => tc.toolName === "clarifyUser")
@@ -77,9 +81,7 @@ export async function POST(req: Request) {
       },
       onError: (error) => {
         console.error("Chat stream error:", error);
-        return error instanceof Error
-          ? error.message
-          : "An error occurred while building your agent.";
+        return normalizeLlmError(error);
       },
     });
 

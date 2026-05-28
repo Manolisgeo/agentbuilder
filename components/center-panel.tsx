@@ -6,6 +6,7 @@ import { AgentGraph } from "@/components/agent-graph";
 import { DesignPreviewPanel } from "@/components/design/design-preview-panel";
 import { PreviewPanel } from "@/components/preview/preview-panel";
 import { isAgentPreviewReady } from "@/lib/agent-prompt";
+import { hasAgentFrontend } from "@/lib/deploy-html";
 import type { AgentSpec } from "@/lib/agent-spec";
 import type { BuildPhase } from "@/lib/build-phase";
 import type { MemoryWriteEvent, SwarmMemoryState } from "@/lib/swarm-memory";
@@ -21,16 +22,17 @@ interface CenterPanelProps {
   buildPhase?: BuildPhase;
   memoryState?: SwarmMemoryState;
   onMemoryUpdate?: (event: MemoryWriteEvent) => void;
+  onSpecUpdate?: (spec: AgentSpec) => void;
 }
 
 const VIEW_OPTIONS: {
   id: CenterView;
   label: string;
   icon: typeof LayoutGrid;
-  requiresReady?: boolean;
+  requiresDesign?: boolean;
 }[] = [
   { id: "canvas", label: "Canvas", icon: LayoutGrid },
-  { id: "preview", label: "Preview", icon: Play, requiresReady: true },
+  { id: "preview", label: "Preview", icon: Play, requiresDesign: true },
   { id: "design", label: "Design", icon: Palette },
 ];
 
@@ -43,8 +45,10 @@ export function CenterPanel({
   buildPhase,
   memoryState,
   onMemoryUpdate,
+  onSpecUpdate,
 }: CenterPanelProps) {
   const canPreview = isAgentPreviewReady(agentSpec);
+  const hasFrontend = hasAgentFrontend(agentSpec);
   const activeIndex = VIEW_OPTIONS.findIndex((option) => option.id === view);
 
   return (
@@ -71,7 +75,9 @@ export function CenterPanel({
         />
 
         {VIEW_OPTIONS.map((option) => {
-          const disabled = option.requiresReady && !canPreview;
+          const disabled =
+            option.requiresDesign &&
+            (!hasFrontend || !canPreview);
           const isActive = view === option.id;
           const Icon = option.icon;
 
@@ -83,7 +89,9 @@ export function CenterPanel({
               disabled={disabled}
               title={
                 disabled
-                  ? "Complete name, role, and instructions to preview"
+                  ? hasFrontend
+                    ? "Complete name, role, and instructions to preview"
+                    : "Generate the frontend in Design before previewing"
                   : option.label
               }
               className={cn(
@@ -115,7 +123,10 @@ export function CenterPanel({
             memoryState={memoryState}
           />
         ) : view === "design" ? (
-          <DesignPreviewPanel agentSpec={agentSpec} />
+          <DesignPreviewPanel
+            agentSpec={agentSpec}
+            onSpecUpdate={onSpecUpdate}
+          />
         ) : (
           <PreviewPanel
             key={JSON.stringify(agentSpec)}

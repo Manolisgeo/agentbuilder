@@ -244,6 +244,16 @@ function coerceDeployment(
   return {
     platform: pickEnum(raw.platform, DEPLOYMENT_PLATFORMS, fallback.platform),
     files,
+    ...(typeof raw.frontendGenerated === "boolean"
+      ? { frontendGenerated: raw.frontendGenerated }
+      : fallback.frontendGenerated !== undefined
+        ? { frontendGenerated: fallback.frontendGenerated }
+        : {}),
+    ...(typeof raw.lastFrontendInstruction === "string"
+      ? { lastFrontendInstruction: raw.lastFrontendInstruction }
+      : fallback.lastFrontendInstruction
+        ? { lastFrontendInstruction: fallback.lastFrontendInstruction }
+        : {}),
   };
 }
 
@@ -332,6 +342,11 @@ export function mergeAgentSpec(
     ? {
         platform: patchDeployment.platform ?? currentDeployment.platform,
         files: patchDeployment.files ?? currentDeployment.files,
+        frontendGenerated:
+          patchDeployment.frontendGenerated ?? currentDeployment.frontendGenerated,
+        lastFrontendInstruction:
+          patchDeployment.lastFrontendInstruction ??
+          currentDeployment.lastFrontendInstruction,
       }
     : currentDeployment;
 
@@ -389,11 +404,8 @@ export function isAgentSpecEmpty(spec: AgentSpec): boolean {
 }
 
 export function hasCustomDesign(spec: AgentSpec): boolean {
-  const ui = spec.ui ?? defaultAgentUi;
-  return (
-    ui.template !== defaultAgentUi.template ||
-    ui.layout !== defaultAgentUi.layout ||
-    ui.theme.primaryColor !== defaultAgentUi.theme.primaryColor ||
-    Boolean(ui.welcomeMessage && ui.welcomeMessage !== defaultAgentUi.welcomeMessage)
+  return Boolean(
+    spec.deployment?.frontendGenerated ||
+    spec.deployment?.files.some((f) => f.path === "index.html" && f.content.trim())
   );
 }

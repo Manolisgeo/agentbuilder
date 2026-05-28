@@ -13,6 +13,7 @@ import {
   updatePersona,
   updateSubAgent,
 } from "@/lib/agent-mutations";
+import { withLlmRetry } from "@/lib/llm";
 import {
   mergeAgentSpec,
   swarmMemoryKeySchema,
@@ -22,7 +23,6 @@ import type { BuildPhase } from "@/lib/build-phase";
 import type { SwarmUIMessage } from "@/lib/chat-types";
 import { clarifyBlockSchema, type ClarifyBlock } from "@/lib/clarify-types";
 import { formatArchitectureContext } from "@/lib/graph-context";
-import { deepseekChat } from "@/lib/deepseek";
 import {
   looseAgentSpecPatchSchema,
   looseAgentUiPatchSchema,
@@ -129,9 +129,10 @@ function sharedTools(writer: ToolWriter, getSpec: () => AgentSpec) {
         questions,
       }: z.infer<typeof researchSchema>) => {
         try {
-          const result = await generateText({
-            model: deepseekChat,
-            system: `You are a research analyst helping design AI agents. Provide structured, actionable findings.
+          const result = await withLlmRetry((model) =>
+            generateText({
+              model,
+              system: `You are a research analyst helping design AI agents. Provide structured, actionable findings.
 Format your response as:
 ## Summary
 (2-3 sentences)
@@ -143,12 +144,13 @@ Format your response as:
 - (specific suggestions)
 
 Be factual and practical. If uncertain, say so.`,
-            prompt: `Research topic: ${topic}${
-              questions?.length
-                ? `\n\nSpecific questions:\n${questions.map((q) => `- ${q}`).join("\n")}`
-                : ""
-            }`,
-          });
+              prompt: `Research topic: ${topic}${
+                questions?.length
+                  ? `\n\nSpecific questions:\n${questions.map((q) => `- ${q}`).join("\n")}`
+                  : ""
+              }`,
+            })
+          );
 
           writer.write({
             type: "data-research",
@@ -380,7 +382,7 @@ function buildingTools(
     },
     updateAgentUi: {
       description:
-        "Configure the deployed agent's visual design: template (chat/widget/landing), layout (sidebar/fullscreen/embedded), welcome message, starter prompts, and theme colors/fonts.",
+        "Update UI metadata (welcome message, starter prompts) used as copy in the HTML frontend. Does NOT change the visual HTML — write HTML via updateDeploymentCode.",
       inputSchema: looseAgentUiPatchSchema,
       execute: async (raw: z.infer<typeof looseAgentUiPatchSchema>) => {
         const parsed = parseAgentUiPatchInput(raw);
@@ -401,7 +403,7 @@ function buildingTools(
     },
     updateDeploymentPlatform: {
       description:
-        "Set the deployment target platform and regenerate starter code. Supports html, typescript, python, and react.",
+        "Set the deployment target platform for client SDK files (typescript, python, react). HTML frontend is written via updateDeploymentCode.",
       inputSchema: z.object({
         platform: z.string(),
       }),
@@ -430,7 +432,7 @@ function buildingTools(
     },
     updateDeploymentCode: {
       description:
-        "Add or update deployment source files (HTML, TypeScript, Python, React/TSX). Use after setting the platform to customize generated code.",
+        "Write or update deployment source files. Use this to create the agent's unique HTML frontend (index.html) — output a complete self-contained HTML document tailored to the agent. Also use for TypeScript, Python, React, or CSS files. On visual redesign, submit the full revised index.html.",
       inputSchema: looseDeploymentCodeSchema,
       execute: async (raw: z.infer<typeof looseDeploymentCodeSchema>) => {
         const parsed = parseDeploymentFilesInput(raw);
@@ -449,7 +451,16 @@ function buildingTools(
               if (idx >= 0) merged[idx] = file;
               else merged.push(file);
             }
-            return updateDeploymentFiles(spec, merged);
+            const wroteHtml = parsed.files.some((f) => f.path === "index.html");
+            return updateDeploymentFiles(
+              spec,
+              merged,
+              wroteHtml
+                ? {
+                    designInstruction: "Frontend updated via updateDeploymentCode",
+                  }
+                : undefined
+            );
           },
           { updated: parsed.files.map((f) => f.path) }
         );

@@ -30,6 +30,9 @@ export const agentUiSchema = z.object({
   template: z.enum(["chat", "widget", "landing"]),
   layout: z.enum(["sidebar", "fullscreen", "embedded"]),
   welcomeMessage: z.string().optional(),
+  welcomeHint: z.string().optional(),
+  heroTitle: z.string().optional(),
+  heroSubtitle: z.string().optional(),
   starterPrompts: z.array(z.string()).optional(),
   theme: agentThemeSchema,
 });
@@ -43,6 +46,9 @@ export const deploymentFileSchema = z.object({
 export const agentDeploymentSchema = z.object({
   platform: deploymentPlatformSchema,
   files: z.array(deploymentFileSchema),
+  /** True when index.html was LLM-generated (not a static template) */
+  frontendGenerated: z.boolean().optional(),
+  lastFrontendInstruction: z.string().optional(),
 });
 
 export type DeploymentPlatform = z.infer<typeof deploymentPlatformSchema>;

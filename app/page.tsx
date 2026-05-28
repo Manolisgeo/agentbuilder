@@ -156,6 +156,7 @@ export default function Home() {
                   buildPhase={buildPhase}
                   memoryState={memoryState}
                   onMemoryUpdate={handleMemoryUpdate}
+                  onSpecUpdate={handleSpecUpdate}
                 />
               }
               right={
