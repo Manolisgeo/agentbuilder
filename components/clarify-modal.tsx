@@ -176,30 +176,17 @@ function LinkInputWidget({
   invalid: boolean;
 }) {
   return (
-    <div className="space-y-3">
-      {question.link && (
-        <a
-          href={question.link}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex w-full items-center justify-between gap-3 rounded-xl border border-primary/40 bg-primary/10 px-4 py-3 text-sm font-medium text-primary transition-all hover:border-primary/70 hover:bg-primary/20"
-        >
-          <span>{question.linkLabel ?? "Open link →"}</span>
-          <ExternalLink className="size-4 shrink-0 opacity-70" />
-        </a>
+    <input
+      type="text"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={question.placeholder ?? "Paste value here…"}
+      autoFocus
+      className={cn(
+        "w-full rounded-xl border bg-white/[0.04] px-4 py-3 font-mono text-sm text-white placeholder:font-sans placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-primary",
+        invalid ? "border-red-500/50" : "border-white/[0.08]"
       )}
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={question.placeholder ?? "Paste value here…"}
-        autoFocus={!question.link}
-        className={cn(
-          "w-full rounded-xl border bg-white/[0.04] px-4 py-3 font-mono text-sm text-white placeholder:font-sans placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-primary",
-          invalid ? "border-red-500/50" : "border-white/[0.08]"
-        )}
-      />
-    </div>
+    />
   );
 }
 
@@ -351,6 +338,20 @@ function ModalContent({ block, onSubmit }: ClarifyModalProps) {
             <span className="ml-2 text-sm font-normal text-white/40">(optional)</span>
           )}
         </p>
+
+        {/* Link button — shown for any question that provides a link */}
+        {current.link && (
+          <a
+            href={current.link}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mb-3 flex w-full items-center justify-between gap-3 rounded-xl border border-primary/40 bg-primary/10 px-4 py-3 text-sm font-medium text-primary transition-all hover:border-primary/70 hover:bg-primary/20"
+          >
+            <span>{current.linkLabel ?? "Open link →"}</span>
+            <ExternalLink className="size-4 shrink-0 opacity-70" />
+          </a>
+        )}
+
         <QuestionInput
           question={current}
           answers={answers}
