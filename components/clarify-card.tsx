@@ -301,94 +301,96 @@ function ReadOnlySummary({
 
 export function ClarifyCard({ block, onSubmit, submitted = false, submittedAnswers }: ClarifyCardProps) {
   const [answers, setAnswers] = useState<AnswerMap>({});
-  const [invalidIds, setInvalidIds] = useState<Set<string>>(new Set());
-  const [validationError, setValidationError] = useState(false);
+  const [stepIndex, setStepIndex] = useState(0);
+  const [invalid, setInvalid] = useState(false);
+
+  const questions = block.questions;
+  const current = questions[stepIndex];
+  const isLast = stepIndex === questions.length - 1;
 
   function setAnswer(id: string, val: string | string[]) {
     setAnswers((prev) => ({ ...prev, [id]: val }));
-    setInvalidIds((prev) => {
-      const next = new Set(prev);
-      next.delete(id);
-      return next;
-    });
+    setInvalid(false);
   }
 
-  function handleSubmit() {
-    const failing = new Set<string>();
-    for (const q of block.questions) {
-      if (q.required === false) continue;
-      const val = answers[q.id];
-      const isEmpty =
-        val === undefined ||
-        val === "" ||
-        (Array.isArray(val) && val.length === 0);
-      if (isEmpty) failing.add(q.id);
+  function handleNext() {
+    if (!current) return;
+    if (current.required !== false) {
+      const val = answers[current.id];
+      const empty = val === undefined || val === "" || (Array.isArray(val) && val.length === 0);
+      if (empty) { setInvalid(true); return; }
     }
+    setInvalid(false);
 
-    if (failing.size > 0) {
-      setInvalidIds(failing);
-      setValidationError(true);
-      return;
+    if (isLast) {
+      const collected: ClarifyAnswer[] = questions.map((q) => ({
+        id: q.id,
+        text: q.text,
+        answer: answers[q.id] ?? "",
+      }));
+      onSubmit(collected);
+    } else {
+      setStepIndex((i) => i + 1);
     }
-
-    setValidationError(false);
-    const collected: ClarifyAnswer[] = block.questions.map((q) => ({
-      id: q.id,
-      text: q.text,
-      answer: answers[q.id] ?? "",
-    }));
-    onSubmit(collected);
   }
 
   if (submitted) {
     return <ReadOnlySummary block={block} answers={submittedAnswers ?? answers} />;
   }
 
+  if (!current) return null;
+
   return (
     <div className="rounded-xl border border-white/[0.06] bg-surface-2/60 p-4">
-      <div className="mb-3 flex items-center gap-2">
-        <Circle className="size-2 fill-primary text-primary" />
-        <span className="hud-label">Quick questions</span>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Circle className="size-2 fill-primary text-primary" />
+          <span className="hud-label">Question {stepIndex + 1} of {questions.length}</span>
+        </div>
+        <div className="flex gap-1">
+          {questions.map((_, i) => (
+            <span
+              key={i}
+              className={`size-1.5 rounded-full transition-colors ${
+                i < stepIndex
+                  ? "bg-primary/60"
+                  : i === stepIndex
+                  ? "bg-primary"
+                  : "bg-white/15"
+              }`}
+            />
+          ))}
+        </div>
       </div>
 
-      {block.context && (
-        <p className="mb-4 text-xs leading-relaxed text-white/60">{block.context}</p>
-      )}
+      <div className="mb-3 flex items-baseline gap-1.5">
+        <span className="text-sm font-medium text-white">
+          {current.text}
+          {current.required === false && (
+            <span className="ml-1.5 text-xs font-normal text-white/40">(optional)</span>
+          )}
+        </span>
+      </div>
 
-      <ol className="space-y-5">
-        {block.questions.map((q, i) => (
-          <li key={q.id}>
-            <div className="mb-2 flex items-baseline gap-1.5">
-              <span className="font-mono text-xs text-primary">{i + 1}.</span>
-              <span className="text-sm font-medium text-white">
-                {q.text}
-                {q.required === false && (
-                  <span className="ml-1.5 text-xs font-normal text-white/40">(optional)</span>
-                )}
-              </span>
-            </div>
-            <QuestionWidget
-              question={q}
-              answers={answers}
-              setAnswer={setAnswer}
-              invalidIds={invalidIds}
-            />
-          </li>
-        ))}
-      </ol>
+      <QuestionWidget
+        question={current}
+        answers={answers}
+        setAnswer={setAnswer}
+        invalidIds={invalid ? new Set([current.id]) : new Set()}
+      />
 
-      <div className="mt-5">
-        {validationError && (
+      <div className="mt-4">
+        {invalid && (
           <p className="mb-2 text-xs text-red-400" aria-live="polite">
-            Please answer all required questions
+            Please answer this question to continue
           </p>
         )}
         <button
           type="button"
-          onClick={handleSubmit}
+          onClick={handleNext}
           className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-primary/80"
         >
-          Send Answers →
+          {isLast ? "Send answers →" : "Next →"}
         </button>
       </div>
     </div>

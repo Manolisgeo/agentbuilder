@@ -57,7 +57,9 @@ export function ChatMessage({
   const isUser = message.role === "user";
 
   const textParts = message.parts.filter((part) => part.type === "text");
-  const toolParts = message.parts.filter((part) => isToolUIPart(part));
+  const toolParts = message.parts.filter(
+    (part) => isToolUIPart(part) && getToolName(part) !== "clarifyUser"
+  );
   const textContent = textParts
     .map((part) => (part.type === "text" ? part.text : ""))
     .join("")
