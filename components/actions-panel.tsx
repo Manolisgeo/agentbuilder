@@ -462,7 +462,7 @@ export function ActionsPanel({
           <p className="mb-3 text-[11.5px] leading-relaxed text-muted-foreground">
             {target === "local"
               ? "Run your agent on this computer."
-              : "Deploy your agent to the cloud with one command."}
+              : "Deploy to Railway in one click — returns a public live URL."}
           </p>
 
           {plan.length > 0 && (

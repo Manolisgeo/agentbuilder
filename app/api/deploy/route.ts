@@ -26,10 +26,16 @@ export const maxDuration = 300;
 function runStep(
   cmd: string,
   args: string[],
-  onLine: (line: string) => void
+  onLine: (line: string) => void,
+  cwd?: string
 ): Promise<{ code: number; out: string }> {
   return new Promise((resolve, reject) => {
-    const child = spawn(cmd, args);
+    // Ensure common CLI install dirs (e.g. the Railway CLI) are on PATH.
+    const env = {
+      ...process.env,
+      PATH: `${process.env.PATH ?? ""}:/opt/homebrew/bin:/usr/local/bin`,
+    };
+    const child = spawn(cmd, args, { cwd, env });
     let out = "";
     const handle = (buf: Buffer) => {
       const text = buf.toString();
@@ -227,8 +233,56 @@ export async function POST(req: Request) {
             }
           }
 
-          // 3a. Railway: bundle is ready; the live push runs via the user's CLI.
+          // 3a. Railway.
           if (target === "railway") {
+            const railwayToken = process.env.RAILWAY_TOKEN;
+            const service = process.env.RAILWAY_SERVICE;
+
+            // One-click path: a default project token + service are configured,
+            // so we deploy on the user's behalf (no CLI/token from the user).
+            if (railwayToken && service) {
+              // Set the service variables the agent needs at runtime.
+              const setArgs = ["variables", "--service", service];
+              if (process.env.DEEPSEEK_API_KEY)
+                setArgs.push("--set", `DEEPSEEK_API_KEY=${process.env.DEEPSEEK_API_KEY}`);
+              setArgs.push("--set", `AGENT_CONFIG=${JSON.stringify(agentConfig)}`);
+              if (agentConfig.voice && elKey)
+                setArgs.push("--set", `ELEVENLABS_API_KEY=${elKey}`);
+              if (gmailEnv)
+                for (const [k, v] of Object.entries(gmailEnv))
+                  setArgs.push("--set", `${k}=${v}`);
+
+              log("Configuring Railway service variables…");
+              await runStep("railway", setArgs, () => {}, outDir);
+
+              log("Uploading + building on Railway (this can take a few minutes)…");
+              const up = await runStep(
+                "railway",
+                ["up", "--ci", "--service", service],
+                (l) => log(l),
+                outDir
+              );
+              if (up.code !== 0) {
+                throw new Error(`Railway deploy failed (exit ${up.code}).`);
+              }
+
+              log("Fetching public URL…");
+              const dom = await runStep(
+                "railway",
+                ["domain", "--service", service],
+                () => {},
+                outDir
+              );
+              const match = dom.out.match(
+                /https?:\/\/[^\s]+\.up\.railway\.app/
+              );
+              const url = match ? match[0] : null;
+              log(url ? `Deployed to Railway: ${url}` : "Deployed (domain pending).");
+              emit({ type: "done", url, target: "railway" });
+              return;
+            }
+
+            // Fallback: no default token — prepare the bundle + manual instructions.
             const env: Record<string, string> = {
               DEEPSEEK_API_KEY: process.env.DEEPSEEK_API_KEY
                 ? "(copy from server)"
@@ -241,7 +295,7 @@ export async function POST(req: Request) {
             if (gmailEnv) Object.assign(env, gmailEnv);
             log("Railway bundle ready (it builds the Dockerfile).");
             log(
-              "To go live: `npm i -g @railway/cli`, `railway login`, then run the command below and set the env vars in the Railway dashboard."
+              "Set RAILWAY_TOKEN + RAILWAY_SERVICE on the server for one-click deploys, or run the command below manually."
             );
             emit({
               type: "prepared",
