@@ -236,7 +236,7 @@ function BoardCanvas({ spec, isBuilding }: CodegenGraphProps) {
 
       {isEmpty && (
         <div className="pointer-events-none absolute inset-x-0 top-14 z-10 flex justify-center px-6">
-          <div className="max-w-md rounded-xl border border-white/[0.06] bg-surface-1/90 px-4 py-3 text-center backdrop-blur-sm">
+          <div className="inner-card max-w-md px-4 py-3 text-center backdrop-blur-sm">
             <p className="text-sm font-medium text-foreground">
               Architecture will appear here
             </p>

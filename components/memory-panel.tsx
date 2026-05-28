@@ -41,7 +41,7 @@ function MemoryKeyRow({
         "rounded-lg border px-3 py-2.5 transition-all duration-300",
         isFlashing
           ? "border-amber-500/40 bg-amber-500/[0.08]"
-          : "border-white/[0.06] bg-white/[0.02]"
+          : "border-black/[0.06] bg-black/[0.02] dark:border-white/[0.06] dark:bg-white/[0.02]"
       )}
     >
       <div className="flex items-center justify-between gap-2 mb-1">
@@ -53,7 +53,7 @@ function MemoryKeyRow({
             className={cn(
               "shrink-0 rounded px-1 py-0.5 font-mono text-[8px] uppercase tracking-wider",
               isEmpty
-                ? "bg-white/[0.04] text-muted-foreground/60"
+                ? "bg-black/[0.04] text-muted-foreground/60 dark:bg-white/[0.04]"
                 : "bg-amber-500/15 text-amber-400/90"
             )}
           >
@@ -132,7 +132,7 @@ export function MemoryPanel({
   if (keys.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-white/[0.06] bg-gradient-to-b from-white/[0.03] to-transparent p-3.5">
+    <div className="inner-card p-3.5">
       <button
         type="button"
         className="mb-2 flex w-full items-center gap-2"
@@ -140,7 +140,7 @@ export function MemoryPanel({
       >
         <Database className="size-3 text-amber-400/80" />
         <p className="hud-label flex-1 text-left">Shared Memory</p>
-        <div className="h-px flex-1 bg-gradient-to-r from-white/[0.08] to-transparent" />
+        <div className="h-px flex-1 bg-gradient-to-r from-black/[0.07] to-transparent dark:from-white/[0.08]" />
         {collapsed ? (
           <ChevronDown className="size-3 text-muted-foreground/60" />
         ) : (

@@ -31,15 +31,15 @@ function ChoiceWidget({
           className={cn(
             "flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm transition-all",
             value === opt
-              ? "border border-primary/50 bg-primary/15 text-white shadow-[0_0_0_1px_rgba(255,107,26,0.3)]"
-              : "border border-white/[0.08] bg-white/[0.03] text-white/70 hover:border-white/20 hover:bg-white/[0.06] hover:text-white",
+              ? "border border-primary/50 bg-primary/15 text-foreground shadow-[0_0_0_1px_rgba(255,107,26,0.3)]"
+              : "border border-black/[0.08] bg-black/[0.03] text-foreground/70 hover:border-black/20 hover:bg-black/[0.05] hover:text-foreground dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-white/70 dark:hover:border-white/20 dark:hover:bg-white/[0.06] dark:hover:text-white",
             invalid && !value ? "border-red-500/50" : ""
           )}
         >
           <span
             className={cn(
               "size-4 shrink-0 rounded-full border-2 transition-colors",
-              value === opt ? "border-primary bg-primary" : "border-white/30"
+              value === opt ? "border-primary bg-primary" : "border-black/25 dark:border-white/30"
             )}
           />
           {opt}
@@ -83,15 +83,15 @@ function MultiChoiceWidget({
             className={cn(
               "flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm transition-all",
               checked
-                ? "border border-primary/50 bg-primary/15 text-white shadow-[0_0_0_1px_rgba(255,107,26,0.3)]"
-                : "border border-white/[0.08] bg-white/[0.03] text-white/70 hover:border-white/20 hover:bg-white/[0.06] hover:text-white",
+                ? "border border-primary/50 bg-primary/15 text-foreground shadow-[0_0_0_1px_rgba(255,107,26,0.3)]"
+                : "border border-black/[0.08] bg-black/[0.03] text-foreground/70 hover:border-black/20 hover:bg-black/[0.05] hover:text-foreground dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-white/70 dark:hover:border-white/20 dark:hover:bg-white/[0.06] dark:hover:text-white",
               invalid && value.length === 0 ? "border-red-500/50" : ""
             )}
           >
             <span
               className={cn(
                 "flex size-4 shrink-0 items-center justify-center rounded border-2 transition-colors",
-                checked ? "border-primary bg-primary" : "border-white/30"
+                checked ? "border-primary bg-primary" : "border-black/25 dark:border-white/30"
               )}
             >
               {checked && <Check className="size-2.5 text-black" strokeWidth={3} />}
@@ -124,10 +124,10 @@ function ConfirmWidget({
           className={cn(
             "flex-1 rounded-xl border px-4 py-3 text-sm font-medium capitalize transition-all",
             value === opt && opt === "yes"
-              ? "border-green-500/50 bg-green-500/15 text-green-300"
+              ? "border-green-500/50 bg-green-500/15 text-green-600 dark:text-green-300"
               : value === opt && opt === "no"
-                ? "border-red-500/50 bg-red-500/15 text-red-300"
-                : "border-white/[0.08] bg-white/[0.03] text-white/70 hover:border-white/20 hover:text-white",
+                ? "border-red-500/50 bg-red-500/15 text-red-600 dark:text-red-300"
+                : "border-black/[0.08] bg-black/[0.03] text-foreground/70 hover:border-black/20 hover:text-foreground dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-white/70 dark:hover:border-white/20 dark:hover:text-white",
             invalid && !value ? "border-red-500/50" : ""
           )}
         >
@@ -157,8 +157,8 @@ function TextWidget({
       placeholder={question.placeholder}
       autoFocus
       className={cn(
-        "w-full rounded-xl border bg-white/[0.04] px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-primary",
-        invalid ? "border-red-500/50" : "border-white/[0.08]"
+        "w-full rounded-xl border bg-black/[0.04] px-4 py-3 text-sm text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-1 focus:ring-primary dark:bg-white/[0.04] dark:text-white dark:placeholder:text-white/30",
+        invalid ? "border-red-500/50" : "border-black/[0.08] dark:border-white/[0.08]"
       )}
     />
   );
@@ -183,8 +183,8 @@ function LinkInputWidget({
       placeholder={question.placeholder ?? "Paste value here…"}
       autoFocus
       className={cn(
-        "w-full rounded-xl border bg-white/[0.04] px-4 py-3 font-mono text-sm text-white placeholder:font-sans placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-primary",
-        invalid ? "border-red-500/50" : "border-white/[0.08]"
+        "w-full rounded-xl border bg-black/[0.04] px-4 py-3 font-mono text-sm text-foreground placeholder:font-sans placeholder:text-foreground/30 focus:outline-none focus:ring-1 focus:ring-primary dark:bg-white/[0.04] dark:text-white dark:placeholder:text-white/30",
+        invalid ? "border-red-500/50" : "border-black/[0.08] dark:border-white/[0.08]"
       )}
     />
   );
@@ -209,8 +209,8 @@ function TextareaWidget({
       placeholder={question.placeholder}
       autoFocus
       className={cn(
-        "w-full resize-none rounded-xl border bg-white/[0.04] px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-primary",
-        invalid ? "border-red-500/50" : "border-white/[0.08]"
+        "w-full resize-none rounded-xl border bg-black/[0.04] px-4 py-3 text-sm text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-1 focus:ring-primary dark:bg-white/[0.04] dark:text-white dark:placeholder:text-white/30",
+        invalid ? "border-red-500/50" : "border-black/[0.08] dark:border-white/[0.08]"
       )}
     />
   );
@@ -392,7 +392,7 @@ export function ClarifyModal({ block, onSubmit }: ClarifyModalProps) {
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
 
       {/* Card */}
-      <div className="relative w-full max-w-lg rounded-2xl border border-white/[0.08] bg-gradient-to-br from-[#1a1816]/98 to-[#0d0b0a]/98 p-8 shadow-[0_32px_80px_-16px_rgba(0,0,0,0.8),0_0_0_1px_rgba(255,255,255,0.04)] backdrop-blur-xl">
+      <div className="relative w-full max-w-lg rounded-2xl border border-black/[0.08] bg-gradient-to-br from-white/95 to-white/90 p-8 shadow-[0_32px_80px_-16px_rgba(0,0,0,0.18),0_0_0_1px_rgba(0,0,0,0.06)] backdrop-blur-xl dark:border-white/[0.08] dark:from-[#1a1816]/98 dark:to-[#0d0b0a]/98 dark:shadow-[0_32px_80px_-16px_rgba(0,0,0,0.8),0_0_0_1px_rgba(255,255,255,0.04)]">
         <ModalContent block={block} onSubmit={onSubmit} />
       </div>
     </div>,

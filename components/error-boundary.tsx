@@ -49,7 +49,7 @@ export class ErrorBoundary extends Component<Props, State> {
             </p>
             <Button
               variant="outline"
-              className="lift mt-5 border-white/[0.08] hover:border-primary/35 hover:bg-primary/[0.06] hover:text-primary"
+              className="lift mt-5 border-black/[0.08] hover:border-primary/35 hover:bg-primary/[0.06] hover:text-primary dark:border-white/[0.08]"
               onClick={() => this.setState({ hasError: false, message: "" })}
             >
               Retry

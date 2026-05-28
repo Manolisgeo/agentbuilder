@@ -32,9 +32,11 @@ export function ChatComposer({
     >
       <div
         className={cn(
-          "group relative rounded-2xl border bg-gradient-to-b from-white/[0.04] to-white/[0.015] transition-all duration-200",
-          "border-white/[0.07] shadow-[0_8px_24px_-12px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.04)]",
-          "focus-within:border-primary/40 focus-within:shadow-[0_0_0_1px_rgba(255,107,26,0.35),0_8px_32px_-8px_rgba(255,107,26,0.35),inset_0_1px_0_rgba(255,255,255,0.06)]"
+          "group relative rounded-2xl border bg-gradient-to-b from-black/[0.015] to-transparent transition-all duration-200",
+          "border-black/[0.07] shadow-[0_4px_16px_-8px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.7)]",
+          "dark:from-white/[0.04] dark:to-white/[0.015] dark:border-white/[0.07] dark:shadow-[0_8px_24px_-12px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.04)]",
+          "focus-within:border-primary/40 focus-within:shadow-[0_0_0_1px_rgba(255,107,26,0.35),0_8px_32px_-8px_rgba(255,107,26,0.25)]",
+          "dark:focus-within:shadow-[0_0_0_1px_rgba(255,107,26,0.35),0_8px_32px_-8px_rgba(255,107,26,0.35),inset_0_1px_0_rgba(255,255,255,0.06)]"
         )}
       >
         <textarea
@@ -79,7 +81,7 @@ export function ChatComposer({
               type="button"
               onClick={onStop}
               aria-label="Stop generating"
-              className="lift flex size-8 shrink-0 items-center justify-center rounded-full border border-white/[0.1] bg-white/[0.04] text-foreground transition-colors hover:border-white/20 hover:bg-white/[0.08]"
+              className="lift flex size-8 shrink-0 items-center justify-center rounded-full border border-black/[0.1] bg-black/[0.04] text-foreground transition-colors hover:border-black/20 hover:bg-black/[0.08] dark:border-white/[0.1] dark:bg-white/[0.04] dark:hover:border-white/20 dark:hover:bg-white/[0.08]"
             >
               <Square className="size-3 fill-current" aria-hidden />
             </button>
@@ -92,7 +94,7 @@ export function ChatComposer({
                 "lift flex size-8 shrink-0 items-center justify-center rounded-full transition-all",
                 canSend
                   ? "bg-gradient-to-br from-[#ff8a3d] to-[#ff6b1a] text-primary-foreground shadow-[0_4px_16px_-4px_rgba(255,107,26,0.7),inset_0_1px_0_rgba(255,255,255,0.25)] hover:shadow-[0_6px_22px_-4px_rgba(255,107,26,0.9),inset_0_1px_0_rgba(255,255,255,0.3)]"
-                  : "cursor-not-allowed bg-white/[0.04] text-muted-foreground/40"
+                  : "cursor-not-allowed bg-black/[0.04] text-muted-foreground/40 dark:bg-white/[0.04]"
               )}
             >
               <ArrowUp className="size-4" strokeWidth={2.5} aria-hidden />

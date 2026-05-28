@@ -196,8 +196,8 @@ export function BoardNode({ data }: NodeProps<Node<BoardNodeData>>) {
         className={cn(
           "relative rounded-2xl p-px transition-all duration-300",
           isPlaceholder
-            ? "bg-white/[0.06]"
-            : "shadow-[0_8px_32px_rgba(0,0,0,0.45)] group-hover:shadow-[0_12px_44px_rgba(0,0,0,0.6)]"
+            ? "bg-black/[0.04] dark:bg-white/[0.06]"
+            : "shadow-[0_4px_16px_rgba(0,0,0,0.12)] group-hover:shadow-[0_8px_24px_rgba(0,0,0,0.18)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.45)] dark:group-hover:shadow-[0_12px_44px_rgba(0,0,0,0.6)]"
         )}
         style={
           isPlaceholder
@@ -212,8 +212,8 @@ export function BoardNode({ data }: NodeProps<Node<BoardNodeData>>) {
           className={cn(
             "relative overflow-hidden rounded-[15px]",
             isPlaceholder
-              ? "border border-dashed border-white/10 bg-[#1a1816]/60"
-              : "bg-gradient-to-b from-[#1f1d22] to-[#16141a]"
+              ? "border border-dashed border-black/[0.1] bg-white/50 backdrop-blur-md dark:border-white/10 dark:bg-[#1a1816]/60 dark:backdrop-blur-none"
+              : "bg-gradient-to-b from-white/90 to-white/80 backdrop-blur-md dark:from-[#1f1d22] dark:to-[#16141a] dark:backdrop-blur-none"
           )}
         >
           {/* Header row */}
@@ -263,7 +263,7 @@ export function BoardNode({ data }: NodeProps<Node<BoardNodeData>>) {
 
           {/* Body */}
           {(data.detail || isPlaceholder) && (
-            <div className="border-t border-white/[0.05] px-3.5 py-2.5">
+            <div className="border-t border-black/[0.06] px-3.5 py-2.5 dark:border-white/[0.05]">
               {data.detail ? (
                 <p className="line-clamp-3 text-[11.5px] leading-relaxed text-muted-foreground">
                   {data.detail}
@@ -278,7 +278,7 @@ export function BoardNode({ data }: NodeProps<Node<BoardNodeData>>) {
 
           {/* Memory read/write badges */}
           {!isPlaceholder && hasMemoryBadges && (
-            <div className="border-t border-white/[0.04] px-3 py-1.5 space-y-0.5">
+            <div className="border-t border-black/[0.05] px-3 py-1.5 space-y-0.5 dark:border-white/[0.04]">
               {data.memoryReads?.map((k) => (
                 <p key={`r-${k}`} className="font-mono text-[9px] text-blue-400/80">
                   ↓ reads: {k}
@@ -294,7 +294,7 @@ export function BoardNode({ data }: NodeProps<Node<BoardNodeData>>) {
 
           {/* Tag pill (bottom-right) */}
           {!isPlaceholder && (
-            <div className="flex items-center justify-end border-t border-white/[0.04] bg-white/[0.015] px-3 py-1.5">
+            <div className="flex items-center justify-end border-t border-black/[0.05] bg-black/[0.02] px-3 py-1.5 dark:border-white/[0.04] dark:bg-white/[0.015]">
               <span
                 className="font-mono text-[9px] uppercase tracking-[0.14em]"
                 style={{ color: `rgba(${theme.accentRgba}, 0.85)` }}

@@ -9,6 +9,7 @@ import {
   type AgentSpec,
 } from "@/lib/agent-spec";
 import type { RuntimeInputs, SlotInput } from "@/lib/connectors";
+import { readTokens } from "@/lib/gmail-tokens";
 import {
   agentSlug,
   generateAgentFiles,
@@ -101,7 +102,6 @@ export async function POST(req: Request) {
         const log = (line: string) => emit({ type: "log", line });
 
         try {
-          // 0. Docker must be installed and the daemon running.
           const docker = await runStep(
             "docker",
             ["version", "--format", "{{.Server.Version}}"],
@@ -120,14 +120,12 @@ export async function POST(req: Request) {
             );
           }
 
-          // 1. Generate the project.
           log("Generating agent project…");
           const files = await generateAgentFiles(spec, plan);
           const outDir = path.join(process.cwd(), "deploy-output", slug);
           await writeFiles(outDir, files);
           log(`Wrote ${Object.keys(files).length} files to deploy-output/${slug}/`);
 
-          // 2. Build the image.
           const image = `agent-${slug}`;
           log(`Building image ${image} (first build installs deps; may take a minute)…`);
           const build = await runStep("docker", ["build", "-t", image, outDir], log);
@@ -135,25 +133,29 @@ export async function POST(req: Request) {
             throw new Error(`docker build failed (exit ${build.code}).`);
           }
 
-          // 3. Replace any previous container for this agent.
           const container = `agent-${slug}`;
           await runStep("docker", ["rm", "-f", container], () => {}).catch(
             () => undefined
           );
 
-          // 4. Assemble run args + runtime config (secrets via env, files via mounts).
           const port = await freePort();
           const args = ["run", "-d", "--name", container, "-p", `${port}:8080`];
           if (process.env.DEEPSEEK_API_KEY) {
             args.push("-e", `DEEPSEEK_API_KEY=${process.env.DEEPSEEK_API_KEY}`);
           }
+
           const agentConfig: {
             slots: Record<string, SlotInput>;
             searchApiKey?: string;
           } = {
             slots: {},
-            searchApiKey: inputs.searchApiKey || process.env.SEARCH_API_KEY,
+            searchApiKey:
+              inputs.searchApiKey ||
+              process.env.TAVILY_API_KEY ||
+              process.env.SEARCH_API_KEY,
           };
+
+          let needsGmail = false;
           for (const c of plan) {
             const rt = inputs.slots?.[c.slot] ?? {};
             if (c.type === "file_search") {
@@ -166,16 +168,45 @@ export async function POST(req: Request) {
                 );
               }
               agentConfig.slots[c.slot] = { glob: rt.glob || c.glob };
-            } else if (c.type === "http_api") {
+            } else if (c.type === "http_api" || c.type === "http_request") {
               agentConfig.slots[c.slot] = {
                 baseUrl: rt.baseUrl || c.baseUrl,
                 authHeader: rt.authHeader,
               };
             } else if (c.type === "db_query") {
               agentConfig.slots[c.slot] = { dbUrl: rt.dbUrl };
+            } else if (c.type === "slack_send") {
+              agentConfig.slots[c.slot] = { webhookUrl: rt.webhookUrl };
+            } else if (
+              c.type === "gmail_read_inbox" ||
+              c.type === "gmail_send_digest"
+            ) {
+              needsGmail = true;
             }
           }
-          args.push("-e", `AGENT_CONFIG=${JSON.stringify(agentConfig)}`, image);
+
+          args.push("-e", `AGENT_CONFIG=${JSON.stringify(agentConfig)}`);
+
+          if (needsGmail) {
+            const tokens = await readTokens().catch(() => null);
+            const clientId =
+              spec.envVars?.GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID;
+            const clientSecret =
+              spec.envVars?.GOOGLE_CLIENT_SECRET ||
+              process.env.GOOGLE_CLIENT_SECRET;
+            if (tokens && clientId && clientSecret) {
+              args.push("-e", `GMAIL_TOKENS=${JSON.stringify(tokens)}`);
+              args.push("-e", `GOOGLE_CLIENT_ID=${clientId}`);
+              args.push("-e", `GOOGLE_CLIENT_SECRET=${clientSecret}`);
+              log("Injected Gmail OAuth tokens from the builder's connected account.");
+            } else {
+              log(
+                "WARNING: Gmail tool present but no stored OAuth tokens/credentials found — connect Gmail in the builder, then redeploy."
+              );
+            }
+          }
+
+          args.push(image);
 
           log(`Starting container on port ${port}…`);
           const run = await runStep("docker", args, (l) => log(l));
@@ -215,4 +246,48 @@ export async function POST(req: Request) {
       { status: 500 }
     );
   }
+}
+
+export async function GET() {
+  try {
+    const { code, out } = await runStep(
+      "docker",
+      [
+        "ps",
+        "--filter",
+        "name=agent-",
+        "--format",
+        "{{.Names}}|{{.Ports}}|{{.Status}}",
+      ],
+      () => {}
+    );
+    if (code !== 0) return Response.json({ deployments: [] });
+    const deployments = out
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const [name, ports = "", status = ""] = line.split("|");
+        const match = ports.match(/0\.0\.0\.0:(\d+)->8080/);
+        const port = match ? Number(match[1]) : null;
+        return {
+          name,
+          status,
+          port,
+          url: port ? `http://localhost:${port}` : null,
+        };
+      });
+    return Response.json({ deployments });
+  } catch {
+    return Response.json({ deployments: [] });
+  }
+}
+
+export async function DELETE(req: Request) {
+  const name = new URL(req.url).searchParams.get("name") ?? "";
+  if (!/^agent-[a-z0-9-]+$/.test(name)) {
+    return Response.json({ error: "Invalid container name." }, { status: 400 });
+  }
+  const { code } = await runStep("docker", ["rm", "-f", name], () => {});
+  return Response.json({ ok: code === 0 });
 }

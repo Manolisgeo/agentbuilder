@@ -2,6 +2,72 @@ import type { BuildPhase } from "@/lib/build-phase";
 import { formatArchitectureContext } from "@/lib/graph-context";
 import type { AgentSpec } from "@/lib/agent-spec";
 
+const GOOGLE_OAUTH_TOOLS = new Set([
+  "gmail_read_inbox",
+  "gmail_send_digest",
+  "gmail_summarizer",
+]);
+
+const SLACK_TOOLS = new Set(["slack_send"]);
+
+function hasToolType(spec: AgentSpec, types: Set<string>): boolean {
+  return spec.tools.some((t) => types.has(t.type));
+}
+
+function buildCredentialGuide(spec: AgentSpec): string {
+  const needsGoogle = hasToolType(spec, GOOGLE_OAUTH_TOOLS);
+  const needsSlack = hasToolType(spec, SLACK_TOOLS);
+
+  if (!needsGoogle && !needsSlack) return "";
+
+  const sections: string[] = [
+    `\n## Collecting credentials interactively\n\nWhen an agent requires OAuth tokens, API keys, or service credentials, use \`clarifyUser\` with \`kind: "link-input"\` questions — never just tell the user to "go get a key." Provide the exact URL to open and a clear link label. After the user submits their answers, call \`setEnvVar\` for each credential to persist it in the spec.`,
+  ];
+
+  if (needsGoogle) {
+    sections.push(`
+### Google OAuth2 (Gmail, Calendar, Drive, etc.)
+
+Use this exact 4-step sequence:
+
+1. **Create / select a project**
+   - link: https://console.cloud.google.com/projectcreate
+   - linkLabel: "Create a Google Cloud project →"
+   - text: "First, create (or select) a Google Cloud project. Click the link, fill in a project name, then paste the project name here so I can reference it."
+   - kind: "text", placeholder: "e.g. My Gmail Agent"
+
+2. **Enable the Gmail API**
+   - link: https://console.cloud.google.com/apis/library/gmail.googleapis.com
+   - linkLabel: "Enable Gmail API →"
+   - text: "Enable the Gmail API for your project. Click the link and hit Enable, then confirm here."
+   - kind: "confirm"
+
+3. **Create OAuth credentials (Client ID)**
+   - link: https://console.cloud.google.com/apis/credentials/oauthclient
+   - linkLabel: "Create OAuth 2.0 credentials →"
+   - text: "Create OAuth 2.0 credentials. Select 'Desktop app', name it anything, click Create — then paste your Client ID below."
+   - kind: "link-input", placeholder: "Paste Client ID here…"
+   - After submit: setEnvVar("GOOGLE_CLIENT_ID", value)
+
+4. **Client Secret**
+   - link: https://console.cloud.google.com/apis/credentials
+   - linkLabel: "Open credentials page →"
+   - text: "On the same credentials page, expand your new OAuth client and paste the Client Secret below."
+   - kind: "link-input", placeholder: "Paste Client Secret here…"
+   - After submit: setEnvVar("GOOGLE_CLIENT_SECRET", value)`);
+  }
+
+  if (needsSlack) {
+    sections.push(`
+### Slack
+
+1. link: https://api.slack.com/apps?new_app=1 — "Create a Slack app →" — ask for the Bot Token after OAuth installation
+   - setEnvVar("SLACK_BOT_TOKEN", value)`);
+  }
+
+  return sections.join("\n");
+}
+
 const CORE_BEHAVIOR = `You are Swarm, an expert AI agent architect — similar to Cursor's AI assistant, but specialized in designing and editing AI agent architectures.
 
 ## How you work (Cursor-style)
@@ -41,49 +107,6 @@ After configuring the agent's behavior, design how it looks when deployed:
 - When research completes, synthesize key findings for the user
 - In discovery, focus on understanding + research + planning; start building when the user is ready or asks`;
 
-const CREDENTIAL_GUIDE = `
-## Collecting credentials interactively
-
-When an agent requires OAuth tokens, API keys, or service credentials, use \`clarifyUser\` with \`kind: "link-input"\` questions — never just tell the user to "go get a key." Provide the exact URL to open and a clear link label. After the user submits their answers, call \`setEnvVar\` for each credential to persist it in the spec.
-
-### Google OAuth2 (Gmail, Calendar, Drive, etc.)
-
-Use this exact 4-step sequence:
-
-1. **Create / select a project**
-   - link: https://console.cloud.google.com/projectcreate
-   - linkLabel: "Create a Google Cloud project →"
-   - text: "First, create (or select) a Google Cloud project. Click the link, fill in a project name, then paste the project name here so I can reference it."
-   - kind: "text", placeholder: "e.g. My Gmail Agent"
-
-2. **Enable the Gmail API**
-   - link: https://console.cloud.google.com/apis/library/gmail.googleapis.com
-   - linkLabel: "Enable Gmail API →"
-   - text: "Enable the Gmail API for your project. Click the link and hit Enable, then confirm here."
-   - kind: "confirm"
-
-3. **Create OAuth credentials (Client ID)**
-   - link: https://console.cloud.google.com/apis/credentials/oauthclient
-   - linkLabel: "Create OAuth 2.0 credentials →"
-   - text: "Create OAuth 2.0 credentials. Select 'Desktop app', name it anything, click Create — then paste your Client ID below."
-   - kind: "link-input", placeholder: "Paste Client ID here…"
-   - After submit: setEnvVar("GOOGLE_CLIENT_ID", value)
-
-4. **Client Secret**
-   - link: https://console.cloud.google.com/apis/credentials
-   - linkLabel: "Open credentials page →"
-   - text: "On the same credentials page, expand your new OAuth client and paste the Client Secret below."
-   - kind: "link-input", placeholder: "Paste Client Secret here…"
-   - After submit: setEnvVar("GOOGLE_CLIENT_SECRET", value)
-
-### Slack
-
-1. link: https://api.slack.com/apps?new_app=1 — "Create a Slack app →" — ask for the Bot Token after OAuth installation
-   - setEnvVar("SLACK_BOT_TOKEN", value)
-
-### Generic API key
-
-Use a single link-input question pointing to the service's API key page, then call setEnvVar with the appropriate name.`;
 
 const DISCOVERY_ADDENDUM = `
 
@@ -119,8 +142,9 @@ export function buildOrchestratorPrompt(
   const phaseAddendum =
     phase === "discovery" ? DISCOVERY_ADDENDUM : BUILDING_ADDENDUM;
   const architecture = formatArchitectureContext(spec);
+  const credentialGuide = buildCredentialGuide(spec);
 
-  return `${CORE_BEHAVIOR}${phaseAddendum}${CREDENTIAL_GUIDE}
+  return `${CORE_BEHAVIOR}${phaseAddendum}${credentialGuide}
 
 ${architecture}`;
 }

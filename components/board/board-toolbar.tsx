@@ -21,7 +21,7 @@ export function BoardToolbar({
   return (
     <div
       className={cn(
-        "pointer-events-auto absolute left-4 right-4 top-3 z-20 flex items-center justify-between gap-3 rounded-full border border-white/[0.07] bg-[#16141a]/85 px-3 py-1.5 shadow-[0_8px_24px_-12px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-xl",
+        "pointer-events-auto absolute left-4 right-4 top-3 z-20 flex items-center justify-between gap-3 rounded-full border border-black/[0.07] bg-white/80 px-3 py-1.5 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-xl dark:border-white/[0.07] dark:bg-[#16141a]/85 dark:shadow-[0_8px_24px_-12px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.05)]",
         className
       )}
     >
@@ -55,7 +55,7 @@ export function BoardToolbar({
           <button
             type="button"
             onClick={onFitView}
-            className="flex size-7 items-center justify-center rounded-full border border-white/[0.07] bg-white/[0.02] text-muted-foreground transition-all hover:border-white/[0.15] hover:bg-white/[0.06] hover:text-foreground"
+            className="flex size-7 items-center justify-center rounded-full border border-black/[0.08] bg-black/[0.02] text-muted-foreground transition-all hover:border-black/[0.15] hover:bg-black/[0.06] hover:text-foreground dark:border-white/[0.07] dark:bg-white/[0.02] dark:hover:border-white/[0.15] dark:hover:bg-white/[0.06]"
             aria-label="Fit canvas to view"
           >
             <Maximize2 className="size-3" />

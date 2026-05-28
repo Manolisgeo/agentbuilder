@@ -1,13 +1,13 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
-import { Command } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Command, User } from "lucide-react";
 import { ActionsPanel } from "@/components/actions-panel";
 import { CenterPanel, type CenterView } from "@/components/center-panel";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ChatPanel } from "@/components/chat-panel";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { ResizableWorkspace } from "@/components/resizable-workspace";
-import { ProgressRail } from "@/components/hud/progress-rail";
 import { ErrorBoundary } from "@/components/error-boundary";
 import {
   computeBuildProgress,
@@ -19,12 +19,26 @@ import {
   normalizeAgentSpec,
   type AgentSpec,
 } from "@/lib/agent-spec";
+import { getAgent, type StoredAgent } from "@/lib/agent-storage";
 import type { BuildPhase } from "@/lib/build-phase";
 import type { MemoryWriteEvent, SwarmMemoryState } from "@/lib/swarm-memory";
 
 export default function Home() {
   const [agentSpec, setAgentSpec] = useState<AgentSpec>(defaultAgentSpec);
+  const [agentId, setAgentId] = useState<string | undefined>(undefined);
   const [buildPhase, setBuildPhase] = useState<BuildPhase>("discovery");
+
+  // Load agent from library when navigating with ?id=
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("id");
+    if (!id) return;
+    const stored = getAgent(id);
+    if (stored) {
+      setAgentSpec(stored.spec);
+      setAgentId(stored.id);
+      setBuildPhase("building");
+    }
+  }, []);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isBuilding, setIsBuilding] = useState(false);
   const [centerView, setCenterView] = useState<CenterView>("canvas");
@@ -34,6 +48,10 @@ export default function Home() {
 
   const handleSpecUpdate = useCallback((spec: AgentSpec) => {
     setAgentSpec((current) => normalizeAgentSpec(spec, current));
+  }, []);
+
+  const handleAgentSaved = useCallback((stored: StoredAgent) => {
+    setAgentId(stored.id);
   }, []);
 
   const handleMemoryUpdate = useCallback((event: MemoryWriteEvent) => {
@@ -66,23 +84,21 @@ export default function Home() {
   return (
     <ErrorBoundary>
       <div className="hud-canvas relative flex h-screen overflow-hidden">
-        <ProgressRail value={buildProgress} />
-
         <AppSidebar />
 
-        <div className="flex min-w-0 flex-1 flex-col">
-          <header className="header-glow-in relative shrink-0 px-7 pt-5 pb-4">
+        <div className="flex min-w-0 flex-1 flex-col bg-background">
+          <header className="relative shrink-0 border-b border-black/[0.05] bg-white/40 px-7 pt-5 pb-4 backdrop-blur-sm dark:border-white/[0.04] dark:bg-transparent dark:backdrop-blur-none">
             <div className="flex items-center justify-between gap-6">
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2.5">
                   <span className="font-mono text-[10px] uppercase tracking-[0.28em] text-muted-foreground/80">
                     Swarm
                   </span>
-                  <span className="size-1 rounded-full bg-white/15" />
+                  <span className="size-1 rounded-full bg-black/20 dark:bg-white/15" />
                   <span className="font-mono text-[10px] uppercase tracking-[0.28em] text-muted-foreground/60">
                     Workspace
                   </span>
-                  <span className="size-1 rounded-full bg-white/15" />
+                  <span className="size-1 rounded-full bg-black/20 dark:bg-white/15" />
                   <span className="font-mono text-[10px] uppercase tracking-[0.28em] text-foreground/70">
                     Agent builder
                   </span>
@@ -90,41 +106,30 @@ export default function Home() {
               </div>
 
               <div className="flex items-center gap-3">
-                <div className="hidden items-center gap-2.5 rounded-full border border-white/[0.06] bg-white/[0.02] px-3 py-1.5 lg:flex">
-                  <span
-                    className={`size-1.5 rounded-full ${
-                      isBuilding
-                        ? "bg-primary shadow-[0_0_8px_rgba(255,107,26,0.8)]"
-                        : hasAgent
-                          ? "bg-success shadow-[0_0_8px_rgba(52,211,153,0.6)]"
-                          : "bg-system idle-pulse"
-                    }`}
-                  />
-                  <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-foreground/80">
-                    {statusLabel}
-                  </span>
-                  <span className="ml-1 font-mono text-[10px] tabular-nums text-muted-foreground">
-                    {buildProgress}%
-                  </span>
-                </div>
-
                 <button
                   type="button"
-                  className="lift hidden items-center gap-2 rounded-full border border-white/[0.07] bg-white/[0.02] px-3 py-1.5 text-xs text-muted-foreground hover:border-white/[0.12] hover:bg-white/[0.04] hover:text-foreground md:flex"
+                  className="hidden items-center gap-2 rounded-full border border-border bg-background/60 px-3 py-1.5 text-xs text-muted-foreground backdrop-blur-sm hover:bg-muted hover:text-foreground md:flex"
                   aria-label="Command palette"
                 >
                   <Command className="size-3" strokeWidth={2} />
                   <span>Quick actions</span>
-                  <kbd>⌘K</kbd>
+                  <kbd className="ml-1 rounded border border-border bg-background px-1 font-mono text-[10px]">⌘K</kbd>
                 </button>
+                <ThemeToggle />
+                <div className="relative ml-2">
+                  <div className="flex size-9 items-center justify-center rounded-full border border-border bg-primary/10 text-primary">
+                    <User className="size-4" strokeWidth={2} />
+                  </div>
+                  <span className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-background bg-success" />
+                </div>
               </div>
             </div>
 
             <div className="mt-2 flex items-end justify-between gap-6">
               <h1 className="text-2xl font-semibold tracking-tight">
-                <span className="text-foreground/95">Build </span>
-                <span className="text-gradient-ember">AI agents</span>
-                <span className="text-foreground/95"> that work for you</span>
+                <span className="text-foreground">Build </span>
+                <span className="text-primary">AI agents</span>
+                <span className="text-foreground"> that work for you</span>
               </h1>
             </div>
           </header>
@@ -156,8 +161,10 @@ export default function Home() {
               right={
                 <ActionsPanel
                   agentSpec={agentSpec}
+                  agentId={agentId}
                   errorMessage={errorMessage}
                   onClearError={() => setErrorMessage(null)}
+                  onAgentSaved={handleAgentSaved}
                   buildProgress={buildProgress}
                   statusLabel={statusLabel}
                   isBuilding={isBuilding}

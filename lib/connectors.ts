@@ -4,16 +4,28 @@ import type { AgentSpec } from "./agent-spec";
 // UI and the server-side generator can share it.
 
 export type DbEngine = "postgres" | "mysql" | "sqlite";
-export type RuntimeNeed = "path" | "glob" | "baseUrl" | "authHeader" | "dbUrl";
+export type RuntimeNeed =
+  | "path"
+  | "glob"
+  | "baseUrl"
+  | "authHeader"
+  | "dbUrl"
+  | "webhookUrl";
 
-// Tool types the local-Docker runtime can actually execute. Other spec tools
-// (gmail_*, slack_send, custom, …) are builder-side concepts with no container
-// runtime, so they are skipped when planning a deploy.
+// Tool types the local-Docker runtime can actually execute. `http_request` is
+// the builder's name for a generic HTTP call (same runtime as `http_api`).
+// Gmail tools reuse the OAuth tokens the builder already stored, injected at
+// deploy time. Remaining builder types (gmail_summarizer, custom) have no
+// container runtime yet, so they are skipped when planning a deploy.
 export const DEPLOY_TOOL_TYPES = [
   "web_search",
   "file_search",
   "http_api",
+  "http_request",
   "db_query",
+  "slack_send",
+  "gmail_read_inbox",
+  "gmail_send_digest",
 ] as const;
 
 // One entry per deployable tool. `slot` is a stable, filesystem/env-safe id
@@ -51,13 +63,17 @@ export function planConnectors(spec: AgentSpec): ConnectorSlot[] {
       base.path = tool.path;
       base.glob = tool.glob;
       base.needs = ["path"];
-    } else if (tool.type === "http_api") {
+    } else if (tool.type === "http_api" || tool.type === "http_request") {
       base.baseUrl = tool.baseUrl;
       base.needs = ["baseUrl", "authHeader"];
     } else if (tool.type === "db_query") {
       base.engine = tool.engine as DbEngine | undefined;
       base.needs = ["dbUrl"];
+    } else if (tool.type === "slack_send") {
+      base.needs = ["webhookUrl"];
     }
+    // gmail_read_inbox / gmail_send_digest need no form input — the deploy
+    // route injects the builder's stored Google OAuth tokens automatically.
     slots.push(base);
   });
   return slots;
@@ -81,6 +97,7 @@ export interface SlotInput {
   baseUrl?: string;
   authHeader?: string;
   dbUrl?: string;
+  webhookUrl?: string;
 }
 export interface RuntimeInputs {
   slots?: Record<string, SlotInput>;
@@ -93,8 +110,9 @@ export const NEED_LABELS: Record<RuntimeNeed, string> = {
   baseUrl: "API base URL",
   authHeader: "Authorization header (optional)",
   dbUrl: "Database connection URL",
+  webhookUrl: "Slack incoming webhook URL",
 };
 
 export function needIsSecret(need: RuntimeNeed): boolean {
-  return need === "authHeader" || need === "dbUrl";
+  return need === "authHeader" || need === "dbUrl" || need === "webhookUrl";
 }

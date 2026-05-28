@@ -90,7 +90,7 @@ export function ChatMessage({
         className={cn(
           "relative mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg border",
           isUser
-            ? "border-white/[0.08] bg-white/[0.03] text-foreground/70"
+            ? "border-black/[0.08] bg-black/[0.03] text-foreground/70 dark:border-white/[0.08] dark:bg-white/[0.03]"
             : "border-primary/30 bg-gradient-to-br from-primary/20 to-primary/5 text-primary shadow-[0_0_12px_-2px_rgba(255,107,26,0.45)]"
         )}
       >

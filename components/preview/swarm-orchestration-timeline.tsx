@@ -30,8 +30,8 @@ function stepAccent(kind: OrchestrationStep["kind"], status: OrchestrationStep["
     if (kind === "synthesize") return "border-violet/40 bg-violet/[0.08] text-violet-200";
     return "border-primary/40 bg-primary/[0.08] text-primary";
   }
-  if (status === "done") return "border-white/[0.08] bg-white/[0.03] text-foreground/85";
-  return "border-white/[0.05] bg-transparent text-muted-foreground";
+  if (status === "done") return "border-black/[0.08] bg-black/[0.03] text-foreground/85 dark:border-white/[0.08] dark:bg-white/[0.03]";
+  return "border-black/[0.05] bg-transparent text-muted-foreground dark:border-white/[0.05]";
 }
 
 export function SwarmOrchestrationTimeline({
@@ -42,7 +42,7 @@ export function SwarmOrchestrationTimeline({
 
   return (
     <div className="my-3 overflow-hidden rounded-xl border border-violet/20 bg-gradient-to-br from-violet/[0.08] via-transparent to-transparent">
-      <div className="flex items-center justify-between border-b border-white/[0.05] px-3 py-2">
+      <div className="flex items-center justify-between border-b border-black/[0.06] px-3 py-2 dark:border-white/[0.05]">
         <div className="flex items-center gap-2">
           <Network className="size-3.5 text-violet-300" />
           <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-violet-200/90">
@@ -65,7 +65,7 @@ export function SwarmOrchestrationTimeline({
           return (
             <div key={step.id} className="relative flex gap-3 pb-4 last:pb-0">
               {!isLast && (
-                <div className="absolute left-[15px] top-8 bottom-0 w-px bg-gradient-to-b from-white/[0.12] to-transparent" />
+                <div className="absolute left-[15px] top-8 bottom-0 w-px bg-gradient-to-b from-black/[0.12] to-transparent dark:from-white/[0.12]" />
               )}
 
               <div
@@ -87,7 +87,7 @@ export function SwarmOrchestrationTimeline({
                     {step.label}
                   </p>
                   {step.agentRole && (
-                    <span className="rounded-full border border-white/[0.08] bg-white/[0.03] px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.12em] text-muted-foreground">
+                    <span className="rounded-full border border-black/[0.07] bg-black/[0.03] px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.12em] text-muted-foreground dark:border-white/[0.08] dark:bg-white/[0.03]">
                       {step.agentRole}
                     </span>
                   )}

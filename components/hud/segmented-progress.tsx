@@ -50,7 +50,7 @@ export function SegmentedProgress({
                 "h-2 flex-1 rounded-[2px] transition-all duration-500 ease-out",
                 isFilled
                   ? "bg-gradient-to-b from-[#ffb27a] to-[#ff6b1a] shadow-[0_0_10px_rgba(255,107,26,0.45)]"
-                  : "bg-white/[0.05]",
+                  : "bg-black/[0.07] dark:bg-white/[0.05]",
                 isEdge && value > 0 && "animate-pulse-glow"
               )}
             />

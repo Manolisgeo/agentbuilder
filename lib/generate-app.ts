@@ -11,8 +11,12 @@ const TEMPLATE_DIR = path.join(process.cwd(), "lib", "runtime-template");
 const TOOL_DESCRIPTIONS: Record<string, string> = {
   file_search: "search the user's connected files",
   http_api: "call a connected HTTP API",
+  http_request: "make an HTTP request to a connected API",
   db_query: "run read-only SQL against a connected database",
   web_search: "search the web",
+  slack_send: "send a message to Slack",
+  gmail_read_inbox: "read unread emails from the connected Gmail inbox",
+  gmail_send_digest: "send an email digest from the connected Gmail account",
 };
 
 function buildSystemPrompt(spec: AgentSpec, plan: ConnectorSlot[]): string {
@@ -54,6 +58,11 @@ async function buildPackageJson(spec: AgentSpec, plan: ConnectorSlot[]) {
   if (engines.has("postgres")) dependencies.pg = "^8.13.0";
   if (engines.has("mysql")) dependencies.mysql2 = "^3.11.0";
   if (engines.has("sqlite")) dependencies["better-sqlite3"] = "^11.3.0";
+
+  const hasGmail = plan.some(
+    (c) => c.type === "gmail_read_inbox" || c.type === "gmail_send_digest"
+  );
+  if (hasGmail) dependencies.googleapis = "^144.0.0";
 
   return {
     name: `${agentSlug(spec.name)}-agent`,
