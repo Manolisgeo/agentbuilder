@@ -1,0 +1,26 @@
+fix whatever issue happened with the agent builder here ype validation failed: Value: {"type":"text","text":"\n\n> ⚠️ Build stopped early (reason: length). You can ask me to continue from where I left off, or click Stop and retry."}. Error message: [ { "code": "invalid_union", "errors": [ [ { "code": "invalid_value", "values": [ "text-start" ], "path": [ "type" ], "message": "Invalid input: expected \"text-start\"" }, { "expected": "string", "code": "invalid_type", "path": [ "id" ], "message": "Invalid input: expected string, received undefined" }, { "code": "unrecognized_keys", "keys": [ "text" ], "path": [], "message": "Unrecognized key: \"text\"" } ], [ { "code": "invalid_value", "values": [ "text-delta" ], "path": [ "type" ], "message": "Invalid input: expected \"text-delta\"" }, { "expected": "string", "code": "invalid_type", "path": [ "id" ], "message": "Invalid input: expected string, received undefined" }, { "expected": "string", "code": "invalid_type", "path": [ "delta" ], "message": "Invalid input: expected string, received undefined" }, { "code": "unrecognized_keys", "keys": [ "text" ], "path": [], "message": "Unrecognized key: \"text\"" } ], [ { "code": "invalid_value", "values": [ "text-end" ], "path": [ "type" ], "message": "Invalid input: expected \"text-end\"" }, { "expected": "string", "code": "invalid_type", "path": [ "id" ], "message": "Invalid input: expected string, received undefined" }, { "code": "unrecognized_keys", "keys": [ "text" ], "path": [], "message": "Unrecognized key: \"text\"" } ], [ { "code": "invalid_value", "values": [ "error" ], "path": [ "type" ], "message": "Invalid input: expected \"error\"" }, { "expected": "string", "code": "invalid_type", "path": [ "errorText" ], "message": "Invalid input: expected string, received undefined" }, { "code": "unrecognized_keys", "keys": [ "text" ], "path": [], "message": "Unrecognized key: \"text\"" } ], [ { "code": "invalid_value", "values":
+
+---
+
+in the chatbox this stuff should be hidden, and just show one at the time with them stacking upon each other Spec updated · Email Digest
+Instructions updated
+Tool added · tool-gmail_fetch_unread
+Tool added · tool-gmail_send_email
+Tool added · tool-summarize_emails
+Tool added · tool-priority_tag
+
+---
+
+add markdow support for the chatbot
+
+---
+
+add markdow support for the chatbot
+
+---
+
+restart localhost
+
+---
+
+restart localhost

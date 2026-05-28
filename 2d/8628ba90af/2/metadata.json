@@ -1,0 +1,95 @@
+{
+  "cli_version": "0.6.3",
+  "checkpoint_id": "2d8628ba90af",
+  "session_id": "63db8bc4-8cf1-4214-be46-8f128438df74",
+  "strategy": "manual-commit",
+  "created_at": "2026-05-28T12:48:54.154999Z",
+  "branch": "main",
+  "checkpoints_count": 4,
+  "files_touched": [
+    "app/api/chat/route.ts",
+    "app/page.tsx",
+    "components/actions-panel.tsx",
+    "components/chat-panel.tsx",
+    "components/chat/chat-message.tsx",
+    "components/chat/tool-call-display.tsx",
+    "components/hud/segmented-progress.tsx",
+    "components/preview/preview-panel.tsx",
+    "docs/plans/professional-ui-polish.md",
+    "lib/agent-prompt.ts",
+    "lib/build-progress.ts",
+    "lib/orchestrator-prompt.ts",
+    "lib/preview-runtime.ts",
+    "lib/preview-types.ts",
+    "package-lock.json",
+    "package.json"
+  ],
+  "agent": "Cursor",
+  "model": "claude-sonnet-4-6",
+  "turn_id": "f361247439f1",
+  "session_metrics": {
+    "turn_count": 4
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-05-28T12:48:54.151857Z",
+    "agent_lines": 2012,
+    "agent_removed": 197,
+    "human_added": 296,
+    "human_modified": 18,
+    "human_removed": 0,
+    "total_committed": 2326,
+    "total_lines_changed": 2523,
+    "agent_percentage": 87.55449861276259,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 457,
+      "user_lines_removed": 13,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        "components/chat/chat-message.tsx": 1,
+        "components/preview/dashboard-card.tsx": 60,
+        "components/preview/preview-panel.tsx": 22,
+        "docs/plans/html-dashboard-preview.md": 282,
+        "lib/agent-prompt.ts": 33,
+        "lib/preview-runtime.ts": 52,
+        "lib/preview-types.ts": 7
+      },
+      "user_removed_per_file": {
+        "components/preview/preview-panel.tsx": 3,
+        "lib/agent-prompt.ts": 1,
+        "lib/preview-runtime.ts": 9
+      }
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 462,
+      "agent_lines_removed": 17
+    },
+    {
+      "checkpoint_number": 3,
+      "user_lines_added": 27,
+      "user_lines_removed": 5,
+      "agent_lines_added": 638,
+      "agent_lines_removed": 45,
+      "user_added_per_file": {
+        "components/preview/preview-panel.tsx": 27
+      },
+      "user_removed_per_file": {
+        "components/preview/preview-panel.tsx": 5
+      }
+    },
+    {
+      "checkpoint_number": 4,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 2699,
+      "agent_lines_removed": 180
+    }
+  ]
+}
