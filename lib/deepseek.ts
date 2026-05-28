@@ -5,4 +5,4 @@ const deepseek = createOpenAI({
   apiKey: process.env.DEEPSEEK_API_KEY,
 });
 
-export const deepseekChat = deepseek("deepseek-chat");
+export const deepseekChat = deepseek.chat("deepseek-chat");
