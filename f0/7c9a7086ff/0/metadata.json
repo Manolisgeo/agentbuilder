@@ -1,0 +1,123 @@
+{
+  "cli_version": "0.6.3",
+  "checkpoint_id": "f07c9a7086ff",
+  "session_id": "a8970386-8fad-4281-b82c-78c92fd51a24",
+  "strategy": "manual-commit",
+  "created_at": "2026-05-28T10:53:24.541695Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "lib/orchestrator-prompt.ts"
+  ],
+  "agent": "Cursor",
+  "model": "claude-sonnet-4-6",
+  "turn_id": "d509135276b0",
+  "session_metrics": {
+    "turn_count": 1
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-05-28T10:53:24.539849Z",
+    "agent_lines": 56,
+    "agent_removed": 32,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 56,
+    "total_lines_changed": 88,
+    "agent_percentage": 100,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 12014,
+      "user_lines_removed": 259,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".playwright-mcp/console-2026-05-28T08-59-05-012Z.log": 15,
+        ".playwright-mcp/console-2026-05-28T08-59-19-331Z.log": 37,
+        ".playwright-mcp/console-2026-05-28T09-09-41-492Z.log": 69,
+        ".playwright-mcp/console-2026-05-28T09-22-02-235Z.log": 10273,
+        ".playwright-mcp/page-2026-05-28T08-59-05-795Z.yml": 148,
+        ".playwright-mcp/page-2026-05-28T08-59-19-650Z.yml": 148,
+        ".playwright-mcp/page-2026-05-28T09-09-42-299Z.yml": 148,
+        ".playwright-mcp/page-2026-05-28T09-09-54-960Z.yml": 193,
+        ".playwright-mcp/page-2026-05-28T09-10-27-427Z.yml": 193,
+        ".playwright-mcp/page-2026-05-28T09-22-03-245Z.yml": 154,
+        "app/agents/page.tsx": 157,
+        "app/globals.css": 201,
+        "app/layout.tsx": 10,
+        "app/page.tsx": 39,
+        "components/actions-panel.tsx": 27,
+        "components/agent-graph.tsx": 1,
+        "components/app-sidebar.tsx": 10,
+        "components/board/board-node.tsx": 7,
+        "components/board/board-toolbar.tsx": 2,
+        "components/board/canvas-empty.tsx": 2,
+        "components/center-panel.tsx": 4,
+        "components/chat-panel.tsx": 6,
+        "components/chat/chat-composer.tsx": 7,
+        "components/chat/chat-message.tsx": 1,
+        "components/chat/plan-steps.tsx": 3,
+        "components/chat/tool-call-display.tsx": 2,
+        "components/clarify-modal.tsx": 16,
+        "components/codegen-graph.tsx": 1,
+        "components/error-boundary.tsx": 1,
+        "components/hud/build-stepper.tsx": 2,
+        "components/hud/idle-reticle.tsx": 2,
+        "components/hud/segmented-progress.tsx": 1,
+        "components/memory-panel.tsx": 4,
+        "components/preview/preview-panel.tsx": 5,
+        "components/preview/web-search-display.tsx": 3,
+        "components/resizable-workspace.tsx": 4,
+        "components/theme-provider.tsx": 9,
+        "components/theme-toggle.tsx": 26,
+        "lib/agent-storage.ts": 71,
+        "package-lock.json": 11,
+        "package.json": 1
+      },
+      "user_removed_per_file": {
+        "app/agents/page.tsx": 22,
+        "app/globals.css": 74,
+        "app/layout.tsx": 2,
+        "app/page.tsx": 32,
+        "components/actions-panel.tsx": 16,
+        "components/agent-graph.tsx": 1,
+        "components/app-sidebar.tsx": 41,
+        "components/board/board-node.tsx": 7,
+        "components/board/board-toolbar.tsx": 2,
+        "components/board/canvas-empty.tsx": 2,
+        "components/center-panel.tsx": 4,
+        "components/chat-panel.tsx": 6,
+        "components/chat/chat-composer.tsx": 5,
+        "components/chat/chat-message.tsx": 1,
+        "components/chat/plan-steps.tsx": 3,
+        "components/chat/tool-call-display.tsx": 2,
+        "components/clarify-modal.tsx": 16,
+        "components/codegen-graph.tsx": 1,
+        "components/error-boundary.tsx": 1,
+        "components/hud/build-stepper.tsx": 2,
+        "components/hud/idle-reticle.tsx": 2,
+        "components/hud/segmented-progress.tsx": 1,
+        "components/memory-panel.tsx": 4,
+        "components/preview/preview-panel.tsx": 5,
+        "components/preview/web-search-display.tsx": 3,
+        "components/resizable-workspace.tsx": 4
+      }
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 7,
+      "user_lines_removed": 10,
+      "agent_lines_added": 12077,
+      "agent_lines_removed": 298,
+      "user_added_per_file": {
+        "app/globals.css": 7
+      },
+      "user_removed_per_file": {
+        "app/globals.css": 10
+      }
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+looks like google api stuff got hard coded to every prompt for the agent and it asks for everything even stuff that doesnt requrie google api now

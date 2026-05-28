@@ -1,0 +1,18 @@
+{
+  "cli_version": "0.6.3",
+  "checkpoint_id": "f07c9a7086ff",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "lib/orchestrator-prompt.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/f0/7c9a7086ff/0/metadata.json",
+      "transcript": "/f0/7c9a7086ff/0/full.jsonl",
+      "content_hash": "/f0/7c9a7086ff/0/content_hash.txt",
+      "prompt": "/f0/7c9a7086ff/0/prompt.txt"
+    }
+  ]
+}
