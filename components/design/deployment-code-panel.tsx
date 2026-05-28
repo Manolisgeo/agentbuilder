@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, Copy, FileCode, Pencil, RotateCcw } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useDeferredValue } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,8 @@ import { updateDeploymentFiles } from "@/lib/agent-mutations";
 import { getPlatformLabel, getSyntaxLanguage } from "@/lib/agent-ui";
 import { syncDeployment } from "@/lib/deployment-templates";
 import type { AgentSpec } from "@/lib/agent-spec";
+
+const HIGHLIGHT_CHAR_LIMIT = 20_000;
 
 interface DeploymentCodePanelProps {
   agentSpec: AgentSpec;
@@ -31,6 +33,11 @@ export function DeploymentCodePanel({
 
   const currentFile =
     files.find((f) => f.path === activeFile) ?? files[0] ?? null;
+
+  // Defer syntax highlighting so the main thread stays responsive when large
+  // HTML lands after a tool call. React will process this at lower priority.
+  const deferredContent = useDeferredValue(currentFile?.content ?? "");
+  const isHighlightable = deferredContent.length < HIGHLIGHT_CHAR_LIMIT;
 
   useEffect(() => {
     if (!files.some((f) => f.path === activeFile)) {
@@ -191,21 +198,41 @@ export function DeploymentCodePanel({
       ) : (
         currentFile && (
           <div className="overflow-hidden rounded-lg border border-white/[0.06]">
-            <SyntaxHighlighter
-              language={getSyntaxLanguage(currentFile.language)}
-              style={oneDark}
-              customStyle={{
-                margin: 0,
-                padding: "12px",
-                fontSize: "11px",
-                lineHeight: "1.5",
-                background: "rgba(0,0,0,0.35)",
-                maxHeight: "220px",
-              }}
-              showLineNumbers
-            >
-              {currentFile.content}
-            </SyntaxHighlighter>
+            {isHighlightable ? (
+              <SyntaxHighlighter
+                language={getSyntaxLanguage(currentFile.language)}
+                style={oneDark}
+                customStyle={{
+                  margin: 0,
+                  padding: "12px",
+                  fontSize: "11px",
+                  lineHeight: "1.5",
+                  background: "rgba(0,0,0,0.35)",
+                  maxHeight: "220px",
+                }}
+                showLineNumbers
+              >
+                {deferredContent}
+              </SyntaxHighlighter>
+            ) : (
+              <pre
+                style={{
+                  margin: 0,
+                  padding: "12px",
+                  fontSize: "11px",
+                  lineHeight: "1.5",
+                  background: "rgba(0,0,0,0.35)",
+                  maxHeight: "220px",
+                  overflowY: "auto",
+                  color: "#abb2bf",
+                  fontFamily: "monospace",
+                  whiteSpace: "pre-wrap",
+                  wordBreak: "break-all",
+                }}
+              >
+                {deferredContent}
+              </pre>
+            )}
           </div>
         )
       )}

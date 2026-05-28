@@ -20,6 +20,7 @@ export const TOOL_TYPES = [
   "file_search",
   "http_api",
   "db_query",
+  "fb_marketplace_search",
 ] as const;
 
 export type ToolType = (typeof TOOL_TYPES)[number];

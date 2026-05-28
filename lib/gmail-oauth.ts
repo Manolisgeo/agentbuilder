@@ -6,17 +6,25 @@ import { google } from "googleapis";
 const REDIRECT_URI = "http://localhost:3000/api/auth/google/callback";
 const SPEC_PATH = path.join(process.cwd(), ".agent-spec.json");
 
-async function loadGoogleCredentials(): Promise<{ clientId: string; clientSecret: string }> {
-  // Prefer explicit env vars, fall back to saved agent spec
+async function loadGoogleCredentials(
+  envVars?: Record<string, string>
+): Promise<{ clientId: string; clientSecret: string }> {
+  // 1. Credentials passed directly from the in-memory agent spec (preview)
+  const specId = envVars?.GOOGLE_CLIENT_ID;
+  const specSecret = envVars?.GOOGLE_CLIENT_SECRET;
+  if (specId && specSecret) return { clientId: specId, clientSecret: specSecret };
+
+  // 2. Process environment variables
   const envId = process.env.GOOGLE_CLIENT_ID;
   const envSecret = process.env.GOOGLE_CLIENT_SECRET;
   if (envId && envSecret) return { clientId: envId, clientSecret: envSecret };
 
+  // 3. Saved agent spec file on disk
   try {
     const raw = await readFile(SPEC_PATH, "utf-8");
-    const spec = JSON.parse(raw) as { envVars?: Record<string, string> };
-    const clientId = spec.envVars?.GOOGLE_CLIENT_ID;
-    const clientSecret = spec.envVars?.GOOGLE_CLIENT_SECRET;
+    const saved = JSON.parse(raw) as { envVars?: Record<string, string> };
+    const clientId = saved.envVars?.GOOGLE_CLIENT_ID;
+    const clientSecret = saved.envVars?.GOOGLE_CLIENT_SECRET;
     if (clientId && clientSecret) return { clientId, clientSecret };
   } catch {
     // spec file not found
@@ -27,8 +35,8 @@ async function loadGoogleCredentials(): Promise<{ clientId: string; clientSecret
   );
 }
 
-export async function createOAuthClient() {
-  const { clientId, clientSecret } = await loadGoogleCredentials();
+export async function createOAuthClient(envVars?: Record<string, string>) {
+  const { clientId, clientSecret } = await loadGoogleCredentials(envVars);
   return new google.auth.OAuth2(clientId, clientSecret, REDIRECT_URI);
 }
 

@@ -63,6 +63,10 @@ export function PreviewPanel({
     []
   );
 
+  // Throttle streaming text updates to avoid flooding the iframe on every chunk.
+  const streamThrottleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingStreamRef = useRef<{ text: string; done: boolean } | null>(null);
+
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
@@ -89,7 +93,16 @@ export function PreviewPanel({
           onMemoryUpdateRef.current?.(dataPart.data);
         }
         if (dataPart.type === "data-gmailAuthRequired") {
-          window.location.href = dataPart.data.redirectUrl;
+          // Save the spec first so the OAuth route can read credentials from
+          // .agent-spec.json — credentials live in spec.envVars and the auth
+          // route has no other way to access them without a saved file.
+          fetch("/api/save-agent", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(agentSpecRef.current),
+          }).finally(() => {
+            window.location.href = dataPart.data.redirectUrl;
+          });
         }
         if (dataPart.type === "data-dashboard") {
           setDashboards((prev) => [...prev, dataPart.data]);
@@ -127,11 +140,32 @@ export function PreviewPanel({
   useEffect(() => {
     if (lastMessage?.role !== "assistant") return;
     const text = getAssistantText(lastMessage);
-    postToFrame({
-      type: "agent-preview-assistant",
-      text,
-      done: !isBusy,
-    });
+    const done = !isBusy;
+
+    // Always send immediately when the stream is done so the iframe sees the
+    // final complete text. During streaming, throttle to ~100ms to avoid
+    // flooding the iframe with postMessage on every token.
+    if (done) {
+      if (streamThrottleRef.current !== null) {
+        clearTimeout(streamThrottleRef.current);
+        streamThrottleRef.current = null;
+      }
+      pendingStreamRef.current = null;
+      postToFrame({ type: "agent-preview-assistant", text, done: true });
+      return;
+    }
+
+    pendingStreamRef.current = { text, done };
+    if (streamThrottleRef.current === null) {
+      streamThrottleRef.current = setTimeout(() => {
+        streamThrottleRef.current = null;
+        const pending = pendingStreamRef.current;
+        if (pending) {
+          pendingStreamRef.current = null;
+          postToFrame({ type: "agent-preview-assistant", ...pending });
+        }
+      }, 100);
+    }
   }, [lastMessage, isBusy, postToFrame]);
 
   useEffect(() => {

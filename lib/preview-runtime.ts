@@ -8,6 +8,7 @@ import {
   type UIMessageStreamWriter,
 } from "ai";
 import { z } from "zod";
+import type { FbSearchOptions } from "@/lib/fb-marketplace/types";
 import {
   buildAgentRuntimePrompt,
   buildOrchestratorRuntimePrompt,
@@ -234,11 +235,60 @@ function createWebSearchTool() {
   };
 }
 
+function createFbMarketplaceTool(spec: AgentSpec) {
+  if (!spec.tools.some((t) => t.type === "fb_marketplace_search")) return undefined;
+
+  return {
+    fb_marketplace_search: {
+      description:
+        "Search Facebook Marketplace listings by keyword, location, and price range. " +
+        "Returns a list of listings with title, price, location, and URL. " +
+        "After getting results, always call renderDashboard to display them visually.",
+      inputSchema: z.object({
+        query: z.string().describe("Search keyword, e.g. 'road bike', 'mountain bike'"),
+        location: z
+          .string()
+          .optional()
+          .describe(
+            "City name, e.g. 'San Francisco, CA'. Supported: San Francisco, New York, Los Angeles, Chicago, Seattle, Austin, Miami, Boston, Denver, Portland"
+          ),
+        minPrice: z.number().optional().describe("Minimum price in USD"),
+        maxPrice: z.number().optional().describe("Maximum price in USD"),
+        limit: z.number().optional().default(10).describe("Max listings to return (max 20)"),
+      }),
+      execute: async ({
+        query,
+        location,
+        minPrice,
+        maxPrice,
+        limit,
+      }: FbSearchOptions) => {
+        try {
+          const res = await fetch(
+            `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/tools/fb-marketplace`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ query, location, minPrice, maxPrice, limit }),
+            }
+          );
+          return await res.json();
+        } catch (err) {
+          return {
+            ok: false,
+            error: err instanceof Error ? err.message : "Failed to search marketplace",
+          };
+        }
+      },
+    },
+  };
+}
+
 async function createGmailTools(spec: AgentSpec) {
   const tokens = await readTokens();
   if (!tokens) return null;
 
-  const oauth2Client = await createOAuthClient();
+  const oauth2Client = await createOAuthClient(spec.envVars ?? undefined);
   oauth2Client.setCredentials(tokens);
   oauth2Client.on("tokens", async (refreshed) => {
     await writeTokens({
@@ -281,11 +331,16 @@ async function runSingleAgentPreview(
 
   const dashboardTool = createDashboardTool(writer);
   const articlesTool = createArticlesTool(writer);
-  const tools = { ...webTools, ...gmailTools, ...dashboardTool, ...articlesTool } as Record<string, unknown>;
+  const fbMarketplaceTool = createFbMarketplaceTool(spec);
+  const tools = { ...webTools, ...gmailTools, ...fbMarketplaceTool, ...dashboardTool, ...articlesTool } as Record<string, unknown>;
+
+  const liveToolsActive =
+    Object.keys({ ...webTools, ...gmailTools }).length > 0 ||
+    fbMarketplaceTool !== undefined;
 
   const result = streamText({
     model: getChatModel(),
-    system: buildAgentRuntimePrompt(spec, { liveTools: Object.keys({ ...webTools, ...gmailTools }).length > 0 }),
+    system: buildAgentRuntimePrompt(spec, { liveTools: liveToolsActive }),
     messages: modelMessages,
     tools: tools as Parameters<typeof streamText>[0]["tools"],
     stopWhen: stepCountIs(5),

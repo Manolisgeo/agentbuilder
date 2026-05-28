@@ -30,12 +30,17 @@ export function hasGmailTools(spec: AgentSpec): boolean {
   );
 }
 
+export function hasFbMarketplaceTool(spec: AgentSpec): boolean {
+  return spec.tools.some((t) => t.type === "fb_marketplace_search");
+}
+
 export function buildAgentRuntimePrompt(
   spec: AgentSpec,
   options: RuntimePromptOptions = {}
 ): string {
   const { liveTools = false, swarmMode = false } = options;
   const hasSearch = hasWebSearchTool(spec);
+  const hasFbSearch = hasFbMarketplaceTool(spec);
 
   let toolsSection = "";
   if (spec.tools.length > 0) {
@@ -45,7 +50,16 @@ export function buildAgentRuntimePrompt(
 
     const hasGmail = hasGmailTools(spec);
 
-    if (liveTools && hasSearch && hasGmail) {
+    if (liveTools && hasFbSearch) {
+      toolsSection =
+        `\n\n## Live capabilities\n${capabilityLines}\n\n` +
+        `You have access to \`fb_marketplace_search\` to find listings on Facebook Marketplace. ` +
+        `When the user asks to find, search, or browse Marketplace listings for any item, call \`fb_marketplace_search\` ` +
+        `with their keyword, location (city + state), and optional price range. ` +
+        `After receiving results, ALWAYS call \`renderDashboard\` with a rich HTML card grid showing the listings — ` +
+        `include title, price, location, and a clickable link for each listing. ` +
+        `If ok is false, tell the user the error clearly and ask them to check their cookies file.`;
+    } else if (liveTools && hasSearch && hasGmail) {
       toolsSection = `\n\n## Live capabilities\n${capabilityLines}\n\nYou have live access to \`web_search\`, \`gmail_read_inbox\`, and \`gmail_send_digest\`. Use \`gmail_read_inbox\` to fetch real unread emails, classify and summarize them, then call \`gmail_send_digest\` to send the HTML digest. Call \`web_search\` for real-time context when needed.`;
     } else if (liveTools && hasGmail) {
       toolsSection = `\n\n## Live capabilities\n${capabilityLines}\n\nYou have live access to \`gmail_read_inbox\` and \`gmail_send_digest\`. Use \`gmail_read_inbox\` to fetch real unread emails from the last hour, classify each by priority, summarize them, then call \`gmail_send_digest\` with an HTML digest email. If there are no unread emails, send a brief "all caught up" confirmation.`;
