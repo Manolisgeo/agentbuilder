@@ -28,7 +28,7 @@ import {
   normalizeAgentSpec,
   type AgentSpec,
 } from "@/lib/agent-spec";
-import { planConnectors } from "@/lib/connectors";
+import { planConnectors, type SlotInput } from "@/lib/connectors";
 import { resolveAgentUi } from "@/lib/agent-ui";
 import { saveAgent, type StoredAgent } from "@/lib/agent-storage";
 import { cn } from "@/lib/utils";
@@ -128,6 +128,14 @@ export function ActionsPanel({
   const [deployLogs, setDeployLogs] = useState<string[]>([]);
   const [deployedUrl, setDeployedUrl] = useState<string | null>(null);
   const [deployError, setDeployError] = useState<string | null>(null);
+  const [slotInputs, setSlotInputs] = useState<Record<string, SlotInput>>({});
+  const [searchKey, setSearchKey] = useState("");
+  const [target, setTarget] = useState<"local" | "railway">("local");
+  const [prepared, setPrepared] = useState<{
+    dir: string;
+    command: string;
+    env: Record<string, string>;
+  } | null>(null);
   const [deployments, setDeployments] = useState<
     { name: string; url: string | null; status: string }[]
   >([]);
@@ -173,12 +181,20 @@ export function ActionsPanel({
     setDeployLogs([]);
     setDeployedUrl(null);
     setDeployError(null);
+    setPrepared(null);
     onClearError();
     try {
       const resp = await fetch("/api/deploy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ spec: normalizeAgentSpec(agentSpec, defaultAgentSpec) }),
+        body: JSON.stringify({
+          spec: normalizeAgentSpec(agentSpec, defaultAgentSpec),
+          target,
+          runtime: {
+            slots: slotInputs,
+            searchApiKey: searchKey.trim() || undefined,
+          },
+        }),
       });
       if (!resp.ok || !resp.body) {
         const msg = await resp.json().catch(() => ({}));
@@ -206,6 +222,9 @@ export function ActionsPanel({
             line?: string;
             url?: string;
             message?: string;
+            dir?: string;
+            command?: string;
+            env?: Record<string, string>;
           };
           try {
             evt = JSON.parse(line);
@@ -214,6 +233,12 @@ export function ActionsPanel({
           }
           if (evt.type === "log" && evt.line) {
             setDeployLogs((prev) => [...prev, evt.line as string]);
+          } else if (evt.type === "prepared" && evt.command && evt.dir) {
+            setPrepared({
+              dir: evt.dir,
+              command: evt.command,
+              env: evt.env ?? {},
+            });
           } else if (evt.type === "done" && evt.url) {
             setDeployedUrl(evt.url);
             refreshDeployments();
@@ -422,9 +447,29 @@ export function ActionsPanel({
 
         {/* Deploy */}
         <div className="rounded-xl border border-white/[0.06] bg-gradient-to-b from-white/[0.03] to-transparent p-3.5">
-          <SectionHeader>Deploy · local Docker</SectionHeader>
+          <SectionHeader>Deploy</SectionHeader>
+          <div className="mb-3 flex gap-1 rounded-lg border border-white/[0.06] bg-white/[0.02] p-1">
+            {(["local", "railway"] as const).map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setTarget(t)}
+                disabled={isDeploying}
+                className={cn(
+                  "flex-1 rounded-md py-1.5 text-[11px] font-medium transition-colors disabled:opacity-50",
+                  target === t
+                    ? "bg-primary/20 text-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {t === "local" ? "Local Docker" : "Railway"}
+              </button>
+            ))}
+          </div>
           <p className="mb-3 text-[11.5px] leading-relaxed text-muted-foreground">
-            Generate a runnable agent and launch it in a container.
+            {target === "local"
+              ? "Generate a runnable agent and launch it in a container."
+              : "Generate a Railway-ready bundle; deploy it live with the Railway CLI."}
           </p>
 
           {plan.length > 0 && (
@@ -456,15 +501,33 @@ export function ActionsPanel({
             {isDeploying ? (
               <>
                 <Loader2 className="size-3.5 animate-spin" />
-                Deploying
+                {target === "railway" ? "Preparing" : "Deploying"}
               </>
             ) : (
               <>
                 <Rocket className="size-3.5" />
-                Deploy locally
+                {target === "railway" ? "Prepare for Railway" : "Deploy locally"}
               </>
             )}
           </Button>
+
+          {prepared && (
+            <div className="mt-2 space-y-2 rounded-md border border-system/25 bg-system/[0.05] p-2.5 text-[11px]">
+              <p className="text-foreground/90">
+                Railway bundle ready in{" "}
+                <span className="font-mono">{prepared.dir}</span>. Run:
+              </p>
+              <pre className="overflow-auto rounded bg-black/30 p-2 font-mono text-[10px] text-system">
+                {prepared.command}
+              </pre>
+              <p className="text-muted-foreground">
+                Set these env vars in the Railway dashboard:
+              </p>
+              <pre className="max-h-28 overflow-auto rounded bg-black/30 p-2 font-mono text-[10px] text-muted-foreground">
+                {Object.keys(prepared.env).join("\n")}
+              </pre>
+            </div>
+          )}
 
           {deployedUrl && (
             <a

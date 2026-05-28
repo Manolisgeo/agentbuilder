@@ -93,6 +93,8 @@ export async function POST(req: Request) {
     // Runtime inputs from the request body are still accepted for programmatic
     // use, but spec.envVars and server env vars are the authoritative sources.
     const inputs: RuntimeInputs = body.runtime ?? {};
+    const target: "local" | "railway" =
+      body.target === "railway" ? "railway" : "local";
     const slug = agentSlug(spec.name);
     const plan = planConnectors(spec);
 
@@ -104,53 +106,16 @@ export async function POST(req: Request) {
         const log = (line: string) => emit({ type: "log", line });
 
         try {
-          // 0. Docker must be installed and the daemon running.
-          const docker = await runStep(
-            "docker",
-            ["version", "--format", "{{.Server.Version}}"],
-            () => {}
-          ).catch(() => ({ code: 1, out: "docker not found" }));
-          if (docker.code !== 0) {
-            throw new Error(
-              "Docker is not available. Install Docker and make sure the daemon is running."
-            );
-          }
-          log(`Docker ${docker.out.trim()} detected.`);
-
-          if (!process.env.DEEPSEEK_API_KEY) {
-            log(
-              "WARNING: DEEPSEEK_API_KEY is not set on the server — the deployed agent will not be able to answer."
-            );
-          }
-
-          // 1. Generate the project.
+          // 1. Generate the bundle (target-aware).
           log("Generating agent project…");
-          const files = await generateAgentFiles(spec, plan);
+          const files = await generateAgentFiles(spec, plan, target);
           const outDir = path.join(process.cwd(), "deploy-output", slug);
           await writeFiles(outDir, files);
           log(`Wrote ${Object.keys(files).length} files to deploy-output/${slug}/`);
 
-          // 2. Build the image.
-          const image = `agent-${slug}`;
-          log(`Building image ${image} (first build installs deps; may take a minute)…`);
-          const build = await runStep("docker", ["build", "-t", image, outDir], log);
-          if (build.code !== 0) {
-            throw new Error(`docker build failed (exit ${build.code}).`);
-          }
-
-          // 3. Replace any previous container for this agent.
-          const container = `agent-${slug}`;
-          await runStep("docker", ["rm", "-f", container], () => {}).catch(
-            () => undefined
-          );
-
-          // 4. Assemble run args + runtime config (secrets via env, files via mounts).
-          const port = await freePort();
-          const args = ["run", "-d", "--name", container, "-p", `${port}:8080`];
-          if (process.env.DEEPSEEK_API_KEY) {
-            args.push("-e", `DEEPSEEK_API_KEY=${process.env.DEEPSEEK_API_KEY}`);
-          }
-
+          // 2. Runtime config (shared). Local mounts file_search folders; cloud
+          //    targets can't, so we note it instead.
+          const fileMounts: string[] = [];
           const agentConfig: {
             slots: Record<string, SlotInput>;
             searchApiKey?: string;
@@ -174,11 +139,18 @@ export async function POST(req: Request) {
             if (c.type === "file_search") {
               // spec path (set by builder) > env fallback > body input
               const hostPath = c.path || process.env.FILE_SEARCH_PATH || rt.path;
-              if (hostPath) {
-                args.push("-v", `${path.resolve(hostPath)}:/data/${c.slot}:ro`);
-              } else {
+              if (hostPath && target === "local") {
+                fileMounts.push(
+                  "-v",
+                  `${path.resolve(hostPath)}:/data/${c.slot}:ro`
+                );
+              } else if (!hostPath) {
                 log(
                   `WARNING: file_search tool "${c.name}" has no folder path — the agent will find nothing.`
+                );
+              } else if (target !== "local") {
+                log(
+                  `NOTE: file_search "${c.name}" mounts a local folder and won't work on cloud targets.`
                 );
               }
               agentConfig.slots[c.slot] = {
@@ -214,10 +186,7 @@ export async function POST(req: Request) {
             }
           }
 
-          args.push("-e", `AGENT_CONFIG=${JSON.stringify(agentConfig)}`);
-
-          // Gmail tools reuse the OAuth tokens + Google credentials the builder
-          // already stored, injected as container env. Read them at deploy time.
+          let gmailEnv: Record<string, string> | null = null;
           if (needsGmail) {
             const tokens = await readTokens().catch(() => null);
             const clientId =
@@ -226,10 +195,11 @@ export async function POST(req: Request) {
               spec.envVars?.GOOGLE_CLIENT_SECRET ||
               process.env.GOOGLE_CLIENT_SECRET;
             if (tokens && clientId && clientSecret) {
-              args.push("-e", `GMAIL_TOKENS=${JSON.stringify(tokens)}`);
-              args.push("-e", `GOOGLE_CLIENT_ID=${clientId}`);
-              args.push("-e", `GOOGLE_CLIENT_SECRET=${clientSecret}`);
-              log("Injected Gmail OAuth tokens from the builder's connected account.");
+              gmailEnv = {
+                GMAIL_TOKENS: JSON.stringify(tokens),
+                GOOGLE_CLIENT_ID: clientId,
+                GOOGLE_CLIENT_SECRET: clientSecret,
+              };
             } else {
               log(
                 "WARNING: Gmail tool present but no stored OAuth tokens/credentials found — connect Gmail in the builder, then redeploy."
@@ -237,6 +207,74 @@ export async function POST(req: Request) {
             }
           }
 
+          // 3a. Railway: bundle is ready; the live push runs via the user's CLI.
+          if (target === "railway") {
+            const env: Record<string, string> = {
+              DEEPSEEK_API_KEY: process.env.DEEPSEEK_API_KEY
+                ? "(copy from server)"
+                : "(required)",
+              AGENT_CONFIG: JSON.stringify(agentConfig),
+            };
+            if (agentConfig.searchApiKey) env.TAVILY_API_KEY = "(set in Railway)";
+            if (gmailEnv) Object.assign(env, gmailEnv);
+            log("Railway bundle ready (it builds the Dockerfile).");
+            log(
+              "To go live: `npm i -g @railway/cli`, `railway login`, then run the command below and set the env vars in the Railway dashboard."
+            );
+            emit({
+              type: "prepared",
+              target: "railway",
+              dir: `deploy-output/${slug}`,
+              command: `cd deploy-output/${slug} && railway up`,
+              env,
+            });
+            emit({ type: "done", prepared: true });
+            return;
+          }
+
+          // 3b. Local Docker: build + run.
+          const docker = await runStep(
+            "docker",
+            ["version", "--format", "{{.Server.Version}}"],
+            () => {}
+          ).catch(() => ({ code: 1, out: "docker not found" }));
+          if (docker.code !== 0) {
+            throw new Error(
+              "Docker is not available. Install Docker and make sure the daemon is running."
+            );
+          }
+          log(`Docker ${docker.out.trim()} detected.`);
+          if (!process.env.DEEPSEEK_API_KEY) {
+            log(
+              "WARNING: DEEPSEEK_API_KEY is not set on the server — the deployed agent will not be able to answer."
+            );
+          }
+
+          const image = `agent-${slug}`;
+          log(`Building image ${image} (first build installs deps; may take a minute)…`);
+          const build = await runStep("docker", ["build", "-t", image, outDir], log);
+          if (build.code !== 0) {
+            throw new Error(`docker build failed (exit ${build.code}).`);
+          }
+
+          const container = `agent-${slug}`;
+          await runStep("docker", ["rm", "-f", container], () => {}).catch(
+            () => undefined
+          );
+
+          const port = await freePort();
+          const args = ["run", "-d", "--name", container, "-p", `${port}:8080`];
+          if (process.env.DEEPSEEK_API_KEY) {
+            args.push("-e", `DEEPSEEK_API_KEY=${process.env.DEEPSEEK_API_KEY}`);
+          }
+          args.push(...fileMounts);
+          args.push("-e", `AGENT_CONFIG=${JSON.stringify(agentConfig)}`);
+          if (gmailEnv) {
+            for (const [k, v] of Object.entries(gmailEnv)) {
+              args.push("-e", `${k}=${v}`);
+            }
+            log("Injected Gmail OAuth tokens from the builder's connected account.");
+          }
           args.push(image);
 
           log(`Starting container on port ${port}…`);
