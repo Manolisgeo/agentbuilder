@@ -1,48 +1,88 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { ActionsPanel } from "@/components/actions-panel";
 import { AgentGraph } from "@/components/agent-graph";
+import { AppSidebar } from "@/components/app-sidebar";
 import { ChatPanel } from "@/components/chat-panel";
+import { SegmentedProgress } from "@/components/hud/segmented-progress";
 import { ErrorBoundary } from "@/components/error-boundary";
-import { defaultAgentSpec, type AgentSpec } from "@/lib/agent-spec";
+import {
+  computeBuildProgress,
+  getBuildStatusLabel,
+} from "@/lib/build-progress";
+import { defaultAgentSpec, isAgentSpecEmpty, type AgentSpec } from "@/lib/agent-spec";
 
 export default function Home() {
   const [agentSpec, setAgentSpec] = useState<AgentSpec>(defaultAgentSpec);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isBuilding, setIsBuilding] = useState(false);
 
   const handleSpecUpdate = useCallback((spec: AgentSpec) => {
     setAgentSpec(spec);
   }, []);
 
+  const buildProgress = useMemo(
+    () => computeBuildProgress(agentSpec),
+    [agentSpec]
+  );
+  const hasAgent = !isAgentSpecEmpty(agentSpec);
+  const statusLabel = getBuildStatusLabel(buildProgress, isBuilding, hasAgent);
+
   return (
     <ErrorBoundary>
-      <div className="flex h-screen flex-col bg-background">
-        <header className="flex items-center justify-between border-b px-6 py-3">
-          <div>
-            <h1 className="text-lg font-semibold tracking-tight">Swarm</h1>
-            <p className="text-xs text-muted-foreground">
-              Conversational AI agent builder
-            </p>
-          </div>
-          <span className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
-            Layer 1 · Build &amp; Export
-          </span>
-        </header>
+      <div className="hud-canvas flex h-screen overflow-hidden">
+        <AppSidebar />
 
-        <main className="grid min-h-0 flex-1 grid-cols-[360px_1fr_320px]">
-          <ChatPanel
-            agentSpec={agentSpec}
-            onSpecUpdate={handleSpecUpdate}
-            onError={setErrorMessage}
-          />
-          <AgentGraph spec={agentSpec} />
-          <ActionsPanel
-            agentSpec={agentSpec}
-            errorMessage={errorMessage}
-            onClearError={() => setErrorMessage(null)}
-          />
-        </main>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <header className="relative shrink-0 border-b border-white/[0.06] bg-surface-1/80 px-6 py-4 backdrop-blur-md">
+            <div className="flex items-center justify-between gap-6">
+              <div>
+                <p className="hud-label mb-1">Swarm · Agent builder</p>
+                <h1 className="text-lg font-medium tracking-tight text-foreground">
+                  Build AI agents that work for you
+                </h1>
+              </div>
+
+              <div className="hidden w-56 sm:block">
+                <SegmentedProgress
+                  value={buildProgress}
+                  statusLabel={statusLabel}
+                  compact
+                />
+              </div>
+
+              <div className="hidden items-center gap-2 lg:flex">
+                <span className="size-1.5 rounded-full bg-system idle-pulse" />
+                <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
+                  {hasAgent ? agentSpec.name : "No agent"}
+                </span>
+              </div>
+            </div>
+          </header>
+
+          <main className="grid min-h-0 flex-1 grid-cols-1 gap-2 p-2 lg:grid-cols-[minmax(300px,340px)_1fr_minmax(260px,280px)]">
+            <ChatPanel
+              agentSpec={agentSpec}
+              onSpecUpdate={handleSpecUpdate}
+              onError={setErrorMessage}
+              onBuildingChange={setIsBuilding}
+            />
+            <AgentGraph
+              spec={agentSpec}
+              isBuilding={isBuilding}
+              buildProgress={buildProgress}
+            />
+            <ActionsPanel
+              agentSpec={agentSpec}
+              errorMessage={errorMessage}
+              onClearError={() => setErrorMessage(null)}
+              buildProgress={buildProgress}
+              statusLabel={statusLabel}
+              isBuilding={isBuilding}
+            />
+          </main>
+        </div>
       </div>
     </ErrorBoundary>
   );

@@ -3,14 +3,9 @@
 import { Download, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import { HudError } from "@/components/hud/hud-error";
+import { HudPanel } from "@/components/hud/hud-panel";
+import { SegmentedProgress } from "@/components/hud/segmented-progress";
 import { downloadAgentBundle } from "@/lib/export";
 import { isAgentSpecEmpty, type AgentSpec } from "@/lib/agent-spec";
 
@@ -18,12 +13,32 @@ interface ActionsPanelProps {
   agentSpec: AgentSpec;
   errorMessage: string | null;
   onClearError: () => void;
+  buildProgress?: number;
+  statusLabel?: string;
+  isBuilding?: boolean;
+}
+
+function SpecField({ label, value }: { label: string; value: string }) {
+  const filled = Boolean(value);
+  return (
+    <div>
+      <p className="hud-label">{label}</p>
+      <p
+        className={`mt-0.5 text-sm ${filled ? "text-foreground" : "text-muted-foreground/50"}`}
+      >
+        {value || "—"}
+      </p>
+    </div>
+  );
 }
 
 export function ActionsPanel({
   agentSpec,
   errorMessage,
   onClearError,
+  buildProgress = 0,
+  statusLabel = "AWAITING INPUT",
+  isBuilding = false,
 }: ActionsPanelProps) {
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -45,102 +60,73 @@ export function ActionsPanel({
   }
 
   return (
-    <div className="flex h-full flex-col border-l bg-card">
-      <div className="border-b px-4 py-3">
-        <h2 className="font-semibold">Actions</h2>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Export your agent as a downloadable bundle.
-        </p>
+    <HudPanel tier={1} className="flex h-full min-h-[420px] flex-col">
+      <div className="border-b border-white/[0.06] px-4 py-3">
+        <p className="hud-label">Telemetry</p>
+        <h2 className="mt-0.5 text-sm font-medium">Actions</h2>
       </div>
 
-      <div className="flex-1 space-y-4 p-4">
+      <div className="flex-1 space-y-3 overflow-y-auto p-3">
         {(errorMessage || exportError) && (
-          <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-            {errorMessage || exportError}
-          </div>
+          <HudError message={errorMessage || exportError || ""} />
         )}
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Agent snapshot</CardTitle>
-            <CardDescription>
-              Current spec fields from the live build.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <div>
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                Name
-              </p>
-              <p className="font-medium">{agentSpec.name}</p>
-            </div>
-            <Separator />
-            <div>
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                Role
-              </p>
-              <p>{agentSpec.persona.role || "—"}</p>
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                Tone
-              </p>
-              <p>{agentSpec.persona.tone || "—"}</p>
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                Tools
-              </p>
-              <p>
-                {agentSpec.tools.length > 0
-                  ? agentSpec.tools.map((t) => t.name).join(", ")
-                  : "—"}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                Instructions
-              </p>
-              <p className="line-clamp-4 text-muted-foreground">
-                {agentSpec.instructions || "—"}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="rounded-lg border border-white/[0.06] bg-surface-2/50 p-3">
+          <SegmentedProgress
+            value={buildProgress}
+            statusLabel={isBuilding ? "ASSEMBLING AGENT" : statusLabel}
+          />
+        </div>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Export bundle</CardTitle>
-            <CardDescription>
-              Downloads a zip with agent.json, agent.md, and README.md.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button
-              className="w-full"
-              onClick={handleExport}
-              disabled={!canExport || isExporting}
-            >
-              {isExporting ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" />
-                  Preparing…
-                </>
-              ) : (
-                <>
-                  <Download className="size-4" />
-                  Download bundle
-                </>
-              )}
-            </Button>
-            {!canExport && (
-              <p className="mt-2 text-xs text-muted-foreground">
-                Chat with the builder first to populate your agent spec.
-              </p>
+        <div className="rounded-lg border border-white/[0.06] bg-surface-2/50 p-3">
+          <p className="hud-label mb-3">Agent snapshot</p>
+          <div className="space-y-3">
+            <SpecField label="Name" value={agentSpec.name} />
+            <div className="h-px bg-white/[0.06]" />
+            <SpecField label="Role" value={agentSpec.persona.role} />
+            <SpecField label="Tone" value={agentSpec.persona.tone} />
+            <SpecField
+              label="Tools"
+              value={
+                agentSpec.tools.length > 0
+                  ? agentSpec.tools.map((t) => t.name).join(", ")
+                  : ""
+              }
+            />
+            <SpecField label="Instructions" value={agentSpec.instructions} />
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-white/[0.06] bg-surface-2/50 p-3">
+          <p className="hud-label mb-1">Export bundle</p>
+          <p className="mb-3 text-xs text-muted-foreground">
+            agent.json · agent.md · README.md
+          </p>
+          <Button
+            variant="outline"
+            className="w-full border-white/[0.08] bg-transparent hover:border-primary/30 hover:bg-primary/[0.06] hover:text-primary"
+            onClick={handleExport}
+            disabled={!canExport || isExporting}
+          >
+            {isExporting ? (
+              <>
+                <Loader2 className="size-4 animate-spin" />
+                Preparing
+              </>
+            ) : (
+              <>
+                <Download className="size-4" />
+                Download bundle
+              </>
             )}
-          </CardContent>
-        </Card>
+          </Button>
+          {!canExport && (
+            <p className="mt-2 text-center font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
+              Awaiting spec data
+            </p>
+          )}
+        </div>
       </div>
-    </div>
+    </HudPanel>
   );
 }

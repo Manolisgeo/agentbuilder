@@ -1,10 +1,10 @@
-import { anthropic } from "@ai-sdk/anthropic";
 import {
   convertToModelMessages,
   createUIMessageStream,
   createUIMessageStreamResponse,
   streamText,
 } from "ai";
+import { deepseekChat } from "@/lib/deepseek";
 import {
   agentSpecPatchSchema,
   agentSpecSchema,
@@ -35,6 +35,13 @@ ${JSON.stringify(spec, null, 2)}`;
 
 export async function POST(req: Request) {
   try {
+    if (!process.env.DEEPSEEK_API_KEY) {
+      return Response.json(
+        { error: "DEEPSEEK_API_KEY is not set. Add it to .env.local." },
+        { status: 500 }
+      );
+    }
+
     const body = await req.json();
     const messages: SwarmUIMessage[] = body.messages ?? [];
     const parsedSpec = agentSpecSchema.safeParse(body.agentSpec);
@@ -47,7 +54,7 @@ export async function POST(req: Request) {
     const stream = createUIMessageStream<SwarmUIMessage>({
       execute: ({ writer }) => {
         const result = streamText({
-          model: anthropic("claude-sonnet-4-20250514"),
+          model: deepseekChat,
           system: buildSystemPrompt(currentSpec),
           messages: modelMessages,
           tools: {

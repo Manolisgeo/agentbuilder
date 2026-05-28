@@ -2,6 +2,7 @@
 
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import { HudPanel } from "@/components/hud/hud-panel";
 
 interface Props {
   children: ReactNode;
@@ -29,19 +30,21 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex h-screen items-center justify-center bg-background p-8">
-          <div className="max-w-md rounded-xl border bg-card p-6 text-center shadow-sm">
-            <h2 className="text-lg font-semibold">Something went wrong</h2>
-            <p className="mt-2 text-sm text-muted-foreground">
+        <div className="hud-canvas flex h-screen items-center justify-center p-8">
+          <HudPanel tier={2} className="max-w-md p-6 text-center">
+            <p className="hud-label mb-2">System fault</p>
+            <h2 className="text-sm font-medium">Something went wrong</h2>
+            <p className="mt-2 text-xs text-muted-foreground">
               {this.state.message || "An unexpected error occurred."}
             </p>
             <Button
-              className="mt-4"
+              variant="outline"
+              className="mt-4 border-white/[0.08] hover:border-primary/30 hover:text-primary"
               onClick={() => this.setState({ hasError: false, message: "" })}
             >
-              Try again
+              Retry
             </Button>
-          </div>
+          </HudPanel>
         </div>
       );
     }
