@@ -1,0 +1,5 @@
+research if it is possible to have an agent look at facebook marketplace listings for a bike and message sellers
+
+---
+
+Ok lets setup a test. You try to do it with my facebook cli, tell me what you need from me. If this works, we will implement it on our agent builder
