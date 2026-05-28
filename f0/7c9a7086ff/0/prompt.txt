@@ -1,1 +1,9 @@
 looks like google api stuff got hard coded to every prompt for the agent and it asks for everything even stuff that doesnt requrie google api now
+
+---
+
+can you commit and push just these changes? there are other features still in progress that we dont want pushed. But first see if there would be conflicts and let me know
+
+---
+
+can you commit and push just these changes? there are other features still in progress that we dont want pushed. But first see if there would be conflicts and let me know
