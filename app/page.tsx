@@ -1,17 +1,23 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import { Command } from "lucide-react";
 import { ActionsPanel } from "@/components/actions-panel";
 import { CenterPanel, type CenterView } from "@/components/center-panel";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ChatPanel } from "@/components/chat-panel";
-import { SegmentedProgress } from "@/components/hud/segmented-progress";
+import { ResizableWorkspace } from "@/components/resizable-workspace";
+import { ProgressRail } from "@/components/hud/progress-rail";
 import { ErrorBoundary } from "@/components/error-boundary";
 import {
   computeBuildProgress,
   getBuildStatusLabel,
 } from "@/lib/build-progress";
-import { defaultAgentSpec, isAgentSpecEmpty, type AgentSpec } from "@/lib/agent-spec";
+import {
+  defaultAgentSpec,
+  isAgentSpecEmpty,
+  type AgentSpec,
+} from "@/lib/agent-spec";
 import type { BuildPhase } from "@/lib/build-phase";
 
 export default function Home() {
@@ -39,61 +45,103 @@ export default function Home() {
 
   return (
     <ErrorBoundary>
-      <div className="hud-canvas flex h-screen overflow-hidden">
+      <div className="hud-canvas relative flex h-screen overflow-hidden">
+        <ProgressRail value={buildProgress} />
+
         <AppSidebar />
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="relative shrink-0 border-b border-white/[0.06] bg-surface-1/80 px-6 py-4 backdrop-blur-md">
+          <header className="header-glow-in relative shrink-0 px-7 pt-5 pb-4">
             <div className="flex items-center justify-between gap-6">
-              <div>
-                <p className="hud-label mb-1">Swarm · Agent builder</p>
-                <h1 className="text-lg font-medium tracking-tight text-foreground">
-                  Build AI agents that work for you
-                </h1>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="font-mono text-[10px] uppercase tracking-[0.28em] text-muted-foreground/80">
+                    Swarm
+                  </span>
+                  <span className="size-1 rounded-full bg-white/15" />
+                  <span className="font-mono text-[10px] uppercase tracking-[0.28em] text-muted-foreground/60">
+                    Workspace
+                  </span>
+                  <span className="size-1 rounded-full bg-white/15" />
+                  <span className="font-mono text-[10px] uppercase tracking-[0.28em] text-foreground/70">
+                    Agent builder
+                  </span>
+                </div>
               </div>
 
-              <div className="hidden w-56 sm:block">
-                <SegmentedProgress
-                  value={buildProgress}
-                  statusLabel={statusLabel}
-                  compact
-                />
-              </div>
+              <div className="flex items-center gap-3">
+                <div className="hidden items-center gap-2.5 rounded-full border border-white/[0.06] bg-white/[0.02] px-3 py-1.5 lg:flex">
+                  <span
+                    className={`size-1.5 rounded-full ${
+                      isBuilding
+                        ? "bg-primary shadow-[0_0_8px_rgba(255,107,26,0.8)]"
+                        : hasAgent
+                          ? "bg-success shadow-[0_0_8px_rgba(52,211,153,0.6)]"
+                          : "bg-system idle-pulse"
+                    }`}
+                  />
+                  <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-foreground/80">
+                    {statusLabel}
+                  </span>
+                  <span className="ml-1 font-mono text-[10px] tabular-nums text-muted-foreground">
+                    {buildProgress}%
+                  </span>
+                </div>
 
-              <div className="hidden items-center gap-2 lg:flex">
-                <span className="size-1.5 rounded-full bg-system idle-pulse" />
-                <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
-                  {hasAgent ? agentSpec.name : "No agent"}
-                </span>
+                <button
+                  type="button"
+                  className="lift hidden items-center gap-2 rounded-full border border-white/[0.07] bg-white/[0.02] px-3 py-1.5 text-xs text-muted-foreground hover:border-white/[0.12] hover:bg-white/[0.04] hover:text-foreground md:flex"
+                  aria-label="Command palette"
+                >
+                  <Command className="size-3" strokeWidth={2} />
+                  <span>Quick actions</span>
+                  <kbd>⌘K</kbd>
+                </button>
               </div>
+            </div>
+
+            <div className="mt-2 flex items-end justify-between gap-6">
+              <h1 className="text-2xl font-semibold tracking-tight">
+                <span className="text-foreground/95">Build </span>
+                <span className="text-gradient-ember">AI agents</span>
+                <span className="text-foreground/95"> that work for you</span>
+              </h1>
             </div>
           </header>
 
-          <main className="grid min-h-0 flex-1 grid-cols-1 gap-2 p-2 lg:grid-cols-[minmax(320px,380px)_1fr_minmax(260px,280px)]">
-            <ChatPanel
-              agentSpec={agentSpec}
-              buildPhase={buildPhase}
-              onBuildPhaseChange={setBuildPhase}
-              onSpecUpdate={handleSpecUpdate}
-              onError={setErrorMessage}
-              onBuildingChange={setIsBuilding}
-            />
-            <CenterPanel
-              view={centerView}
-              onViewChange={setCenterView}
-              agentSpec={agentSpec}
-              isBuilding={isBuilding}
-              buildProgress={buildProgress}
-              buildPhase={buildPhase}
-            />
-            <ActionsPanel
-              agentSpec={agentSpec}
-              errorMessage={errorMessage}
-              onClearError={() => setErrorMessage(null)}
-              buildProgress={buildProgress}
-              statusLabel={statusLabel}
-              isBuilding={isBuilding}
-              onPreview={() => setCenterView("preview")}
+          <main className="flex min-h-0 flex-1 flex-col overflow-hidden px-5 pb-5">
+            <ResizableWorkspace
+              left={
+                <ChatPanel
+                  agentSpec={agentSpec}
+                  buildPhase={buildPhase}
+                  onBuildPhaseChange={setBuildPhase}
+                  onSpecUpdate={handleSpecUpdate}
+                  onError={setErrorMessage}
+                  onBuildingChange={setIsBuilding}
+                />
+              }
+              center={
+                <CenterPanel
+                  view={centerView}
+                  onViewChange={setCenterView}
+                  agentSpec={agentSpec}
+                  isBuilding={isBuilding}
+                  buildProgress={buildProgress}
+                  buildPhase={buildPhase}
+                />
+              }
+              right={
+                <ActionsPanel
+                  agentSpec={agentSpec}
+                  errorMessage={errorMessage}
+                  onClearError={() => setErrorMessage(null)}
+                  buildProgress={buildProgress}
+                  statusLabel={statusLabel}
+                  isBuilding={isBuilding}
+                  onPreview={() => setCenterView("preview")}
+                />
+              }
             />
           </main>
         </div>

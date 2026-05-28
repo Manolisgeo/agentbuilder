@@ -2,7 +2,13 @@
 
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { Hammer } from "lucide-react";
+import {
+  ArrowRight,
+  Hammer,
+  Headphones,
+  Newspaper,
+  Search,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ChatComposer } from "@/components/chat/chat-composer";
 import { ChatMessage } from "@/components/chat/chat-message";
@@ -24,9 +30,24 @@ interface ChatPanelProps {
 }
 
 const STARTER_PROMPTS = [
-  "Build me a research assistant that searches the web and summarizes findings.",
-  "Create a customer support agent with a professional, empathetic tone.",
-  "I need an agent that monitors news and sends concise daily briefings.",
+  {
+    icon: Search,
+    label: "Research assistant",
+    text: "Build me a research assistant that searches the web and summarizes findings.",
+    accent: "from-system/20 to-system/5 text-system",
+  },
+  {
+    icon: Headphones,
+    label: "Customer support",
+    text: "Create a customer support agent with a professional, empathetic tone.",
+    accent: "from-violet/20 to-violet/5 text-violet-300",
+  },
+  {
+    icon: Newspaper,
+    label: "Daily briefings",
+    text: "I need an agent that monitors news and sends concise daily briefings.",
+    accent: "from-primary/20 to-primary/5 text-primary",
+  },
 ];
 
 function looksLikeBuildIntent(text: string): boolean {
@@ -87,7 +108,26 @@ export function ChatPanel({
   }, [isBusy, buildPhase, onBuildingChange]);
 
   useEffect(() => {
-    scrollAnchorRef.current?.scrollIntoView({ behavior: "smooth" });
+    const anchor = scrollAnchorRef.current;
+    if (!anchor) return;
+    const scrollContainer = anchor.closest(
+      "[data-slot='scroll-area-viewport']"
+    ) as HTMLElement | null;
+    if (!scrollContainer) return;
+
+    const distanceFromBottom =
+      scrollContainer.scrollHeight -
+      scrollContainer.scrollTop -
+      scrollContainer.clientHeight;
+    const shouldAutoScroll =
+      messages.length <= 1 || distanceFromBottom < 120;
+
+    if (shouldAutoScroll) {
+      scrollContainer.scrollTo({
+        top: scrollContainer.scrollHeight,
+        behavior: "smooth",
+      });
+    }
   }, [messages, isBusy]);
 
   function submitPrompt(text: string) {
@@ -116,51 +156,80 @@ export function ChatPanel({
   }
 
   return (
-    <HudPanel tier={1} className="flex h-full min-h-[420px] flex-col">
-      <div className="flex items-start justify-between gap-3 border-b border-white/[0.06] px-4 py-3">
-        <div>
-          <p className="hud-label">Input channel</p>
-          <h2 className="mt-0.5 text-sm font-medium">Agent builder</h2>
+    <HudPanel tier={1} className="flex h-full min-h-0 flex-col overflow-hidden">
+      <div className="flex items-center justify-between gap-3 border-b border-white/[0.05] px-4 py-3.5">
+        <div className="flex items-center gap-2.5">
+          <span
+            className={`size-1.5 rounded-full ${
+              isBusy
+                ? "bg-primary shadow-[0_0_8px_rgba(255,107,26,0.8)]"
+                : "bg-system shadow-[0_0_6px_rgba(34,211,238,0.6)] idle-pulse"
+            }`}
+          />
+          <div>
+            <p className="hud-label leading-none">Conversation</p>
+            <h2 className="mt-1 text-[13px] font-medium leading-none text-foreground">
+              Builder
+            </h2>
+          </div>
         </div>
+
         {isDiscovery ? (
-          <span className="rounded-md border border-system/25 bg-system/[0.06] px-2 py-1 font-mono text-[9px] uppercase tracking-[0.14em] text-system">
+          <span className="flex items-center gap-1.5 rounded-full border border-system/25 bg-system/[0.06] px-2.5 py-1 font-mono text-[9px] uppercase tracking-[0.16em] text-system">
+            <span className="size-1 rounded-full bg-system" />
             Discovery
           </span>
         ) : (
-          <span className="rounded-md border border-primary/25 bg-primary/[0.06] px-2 py-1 font-mono text-[9px] uppercase tracking-[0.14em] text-primary">
+          <span className="flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/[0.08] px-2.5 py-1 font-mono text-[9px] uppercase tracking-[0.16em] text-primary">
+            <span className="size-1 rounded-full bg-primary [animation:idle-pulse_1.4s_ease-in-out_infinite]" />
             Building
           </span>
         )}
       </div>
 
-      <ScrollArea className="flex-1 px-3">
-        <div className="space-y-4 py-4">
+      <ScrollArea className="min-h-0 flex-1 px-3">
+        <div className="space-y-5 py-4">
           {messages.length === 0 && (
-            <div className="space-y-3">
-              <div className="rounded-xl border border-white/[0.06] bg-surface-2/40 px-4 py-4">
-                <p className="text-sm font-medium text-foreground">
+            <div className="space-y-4">
+              <div className="relative overflow-hidden rounded-xl border border-white/[0.06] bg-gradient-to-br from-white/[0.04] to-transparent px-4 py-4">
+                <div className="absolute -right-12 -top-12 size-32 rounded-full bg-primary/10 blur-2xl" />
+                <p className="relative text-[14px] font-medium text-foreground">
                   Let&apos;s design your agent together
                 </p>
-                <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                <p className="relative mt-1.5 text-[12.5px] leading-relaxed text-muted-foreground">
                   I&apos;ll ask a few questions about purpose, tone, and
-                  capabilities before assembling anything. When we&apos;re aligned,
-                  hit <span className="text-foreground/80">Start building</span>.
+                  capabilities, then we&apos;ll assemble the spec together.
                 </p>
               </div>
 
-              <div className="space-y-1.5">
-                <p className="hud-label px-1">Quick prompts</p>
-                {STARTER_PROMPTS.map((prompt) => (
-                  <button
-                    key={prompt}
-                    type="button"
-                    onClick={() => submitPrompt(prompt)}
-                    disabled={isBusy}
-                    className="w-full rounded-lg border border-white/[0.06] bg-surface-1 px-3 py-2.5 text-left text-xs leading-relaxed text-muted-foreground transition-all duration-200 hover:border-primary/25 hover:bg-surface-2/50 hover:text-foreground disabled:opacity-40"
-                  >
-                    {prompt}
-                  </button>
-                ))}
+              <div className="space-y-2">
+                <p className="hud-label px-1">Quick starts</p>
+                <div className="space-y-1.5">
+                  {STARTER_PROMPTS.map((prompt) => (
+                    <button
+                      key={prompt.text}
+                      type="button"
+                      onClick={() => submitPrompt(prompt.text)}
+                      disabled={isBusy}
+                      className="group lift flex w-full items-start gap-3 rounded-xl border border-white/[0.05] bg-white/[0.015] px-3 py-2.5 text-left transition-all hover:border-white/[0.1] hover:bg-white/[0.04] disabled:opacity-40"
+                    >
+                      <div
+                        className={`flex size-7 shrink-0 items-center justify-center rounded-lg border border-white/[0.06] bg-gradient-to-br ${prompt.accent} shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]`}
+                      >
+                        <prompt.icon className="size-3.5" strokeWidth={1.8} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[11px] font-mono uppercase tracking-[0.12em] text-muted-foreground/80">
+                          {prompt.label}
+                        </p>
+                        <p className="mt-1 text-[12.5px] leading-relaxed text-foreground/85 group-hover:text-foreground">
+                          {prompt.text}
+                        </p>
+                      </div>
+                      <ArrowRight className="mt-1 size-3.5 shrink-0 text-muted-foreground/40 transition-all group-hover:translate-x-0.5 group-hover:text-primary" />
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           )}
@@ -179,11 +248,11 @@ export function ChatPanel({
       </ScrollArea>
 
       {isDiscovery && messages.length > 0 && !isBusy && (
-        <div className="border-t border-white/[0.06] px-3 py-2.5">
+        <div className="border-t border-white/[0.05] px-3 py-2.5">
           <Button
             type="button"
             onClick={startBuilding}
-            className="h-8 w-full gap-2 bg-primary/90 text-primary-foreground hover:bg-primary"
+            className="lift h-9 w-full gap-2 bg-gradient-to-br from-[#ff8a3d] to-[#ff6b1a] text-primary-foreground shadow-[0_4px_16px_-4px_rgba(255,107,26,0.55),inset_0_1px_0_rgba(255,255,255,0.2)] hover:shadow-[0_6px_22px_-4px_rgba(255,107,26,0.75),inset_0_1px_0_rgba(255,255,255,0.25)]"
           >
             <Hammer className="size-3.5" aria-hidden />
             Start building
@@ -191,7 +260,7 @@ export function ChatPanel({
         </div>
       )}
 
-      <div className="border-t border-white/[0.06]">
+      <div className="border-t border-white/[0.05]">
         <ChatComposer
           value={input}
           onChange={setInput}

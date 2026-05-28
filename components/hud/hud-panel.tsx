@@ -3,9 +3,9 @@ import { cn } from "@/lib/utils";
 type HudTier = 1 | 2 | 3;
 
 const tierStyles: Record<HudTier, string> = {
-  1: "bg-surface-1 shadow-hud-sm",
-  2: "bg-surface-2 shadow-hud-md",
-  3: "bg-surface-3 shadow-hud-lg",
+  1: "glass-panel",
+  2: "glass-panel",
+  3: "glass-panel-elevated",
 };
 
 interface HudPanelProps {
@@ -13,20 +13,36 @@ interface HudPanelProps {
   className?: string;
   tier?: HudTier;
   live?: boolean;
+  glow?: "none" | "ember" | "cyan" | "violet";
 }
+
+const glowStyles = {
+  none: "",
+  ember: "shadow-glow-ember",
+  cyan: "shadow-glow-cyan",
+  violet: "shadow-glow-violet",
+} as const;
 
 export function HudPanel({
   children,
   className,
   tier = 2,
   live = false,
+  glow = "none",
 }: HudPanelProps) {
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-xl border border-white/[0.06] ring-1 ring-inset ring-white/[0.03]",
+        "top-highlight relative overflow-hidden rounded-2xl",
         tierStyles[tier],
         live && "hud-brackets",
+        glow !== "none" &&
+          glow === "ember" &&
+          "[box-shadow:var(--shadow-hud-md),var(--shadow-glow-ember)]",
+        glow === "cyan" &&
+          "[box-shadow:var(--shadow-hud-md),var(--shadow-glow-cyan)]",
+        glow === "violet" &&
+          "[box-shadow:var(--shadow-hud-md),var(--shadow-glow-violet)]",
         className
       )}
     >

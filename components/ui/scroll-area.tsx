@@ -13,7 +13,7 @@ function ScrollArea({
   return (
     <ScrollAreaPrimitive.Root
       data-slot="scroll-area"
-      className={cn("relative", className)}
+      className={cn("relative min-h-0 overflow-hidden", className)}
       {...props}
     >
       <ScrollAreaPrimitive.Viewport
@@ -46,7 +46,7 @@ function ScrollBar({
     >
       <ScrollAreaPrimitive.Thumb
         data-slot="scroll-area-thumb"
-        className="relative flex-1 rounded-full bg-border"
+        className="relative flex-1 rounded-full bg-white/10 hover:bg-primary/40"
       />
     </ScrollAreaPrimitive.Scrollbar>
   )

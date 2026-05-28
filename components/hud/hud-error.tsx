@@ -15,24 +15,34 @@ export function HudError({
   return (
     <div
       className={cn(
-        "flex items-start gap-2 rounded-lg border px-3 py-2",
+        "relative flex items-start gap-2.5 overflow-hidden rounded-xl border px-3 py-2.5",
         variant === "amber"
-          ? "border-primary/30 bg-primary/[0.06]"
-          : "border-system/30 bg-system/[0.06]",
+          ? "border-primary/30 bg-gradient-to-br from-primary/[0.08] to-primary/[0.02]"
+          : "border-system/30 bg-gradient-to-br from-system/[0.08] to-system/[0.02]",
         className
       )}
     >
-      <AlertTriangle
+      <div
         className={cn(
-          "mt-0.5 size-3.5 shrink-0",
-          variant === "amber" ? "text-primary" : "text-system"
+          "absolute -right-8 -top-8 size-20 rounded-full blur-2xl",
+          variant === "amber" ? "bg-primary/20" : "bg-system/20"
         )}
       />
-      <div>
-        <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground">
+      <div
+        className={cn(
+          "relative mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-md",
+          variant === "amber"
+            ? "bg-primary/15 text-primary"
+            : "bg-system/15 text-system"
+        )}
+      >
+        <AlertTriangle className="size-3" strokeWidth={2.2} />
+      </div>
+      <div className="relative">
+        <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-muted-foreground">
           System alert
         </p>
-        <p className="mt-0.5 text-xs leading-relaxed text-foreground/90">
+        <p className="mt-0.5 text-[12px] leading-relaxed text-foreground/90">
           {message}
         </p>
       </div>

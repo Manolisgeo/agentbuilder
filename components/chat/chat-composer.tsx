@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUp, Square } from "lucide-react";
+import { ArrowUp, Sparkles, Square } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ChatComposerProps {
@@ -30,14 +30,20 @@ export function ChatComposer({
         if (canSend) onSubmit();
       }}
     >
-      <div className="rounded-xl border border-white/[0.08] bg-surface-1 shadow-hud-sm transition-colors focus-within:border-white/[0.12]">
+      <div
+        className={cn(
+          "group relative rounded-2xl border bg-gradient-to-b from-white/[0.04] to-white/[0.015] transition-all duration-200",
+          "border-white/[0.07] shadow-[0_8px_24px_-12px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.04)]",
+          "focus-within:border-primary/40 focus-within:shadow-[0_0_0_1px_rgba(255,107,26,0.35),0_8px_32px_-8px_rgba(255,107,26,0.35),inset_0_1px_0_rgba(255,255,255,0.06)]"
+        )}
+      >
         <textarea
           value={value}
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
           rows={1}
           disabled={isBusy}
-          className="block max-h-40 min-h-[44px] w-full resize-none bg-transparent px-3.5 py-3 text-sm leading-relaxed outline-none placeholder:text-muted-foreground/70 disabled:opacity-60"
+          className="block max-h-40 min-h-[48px] w-full resize-none bg-transparent px-4 py-3.5 text-[14px] leading-relaxed outline-none placeholder:text-muted-foreground/60 disabled:opacity-60"
           onKeyDown={(event) => {
             if (event.key === "Enter" && !event.shiftKey) {
               event.preventDefault();
@@ -51,17 +57,24 @@ export function ChatComposer({
           }}
         />
 
-        <div className="flex items-center justify-between gap-2 px-2.5 pb-2.5">
-          <p className="pl-1 text-[10px] text-muted-foreground/60">
-            Enter to send · Shift+Enter for newline
-          </p>
+        <div className="flex items-center justify-between gap-2 px-3 pb-2.5">
+          <div className="flex items-center gap-2 pl-1">
+            <Sparkles className="size-3 text-primary/60" aria-hidden />
+            <span className="text-[10px] text-muted-foreground/70">
+              <kbd>Enter</kbd>
+              <span className="mx-1">to send</span>
+              <kbd>⇧</kbd>
+              <kbd>↵</kbd>
+              <span className="ml-1">for newline</span>
+            </span>
+          </div>
 
           {isBusy ? (
             <button
               type="button"
               onClick={onStop}
               aria-label="Stop generating"
-              className="flex size-8 shrink-0 items-center justify-center rounded-full border border-white/[0.12] bg-surface-3 text-foreground transition-colors hover:border-white/20 hover:bg-surface-2"
+              className="lift flex size-8 shrink-0 items-center justify-center rounded-full border border-white/[0.1] bg-white/[0.04] text-foreground transition-colors hover:border-white/20 hover:bg-white/[0.08]"
             >
               <Square className="size-3 fill-current" aria-hidden />
             </button>
@@ -71,10 +84,10 @@ export function ChatComposer({
               disabled={!canSend}
               aria-label="Send message"
               className={cn(
-                "flex size-8 shrink-0 items-center justify-center rounded-full transition-all",
+                "lift flex size-8 shrink-0 items-center justify-center rounded-full transition-all",
                 canSend
-                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                  : "cursor-not-allowed bg-surface-3 text-muted-foreground/40"
+                  ? "bg-gradient-to-br from-[#ff8a3d] to-[#ff6b1a] text-primary-foreground shadow-[0_4px_16px_-4px_rgba(255,107,26,0.7),inset_0_1px_0_rgba(255,255,255,0.25)] hover:shadow-[0_6px_22px_-4px_rgba(255,107,26,0.9),inset_0_1px_0_rgba(255,255,255,0.3)]"
+                  : "cursor-not-allowed bg-white/[0.04] text-muted-foreground/40"
               )}
             >
               <ArrowUp className="size-4" strokeWidth={2.5} aria-hidden />

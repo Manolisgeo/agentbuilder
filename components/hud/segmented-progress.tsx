@@ -13,7 +13,7 @@ interface SegmentedProgressProps {
 
 export function SegmentedProgress({
   value,
-  segments = 10,
+  segments = 12,
   statusLabel,
   className,
   compact = false,
@@ -22,19 +22,20 @@ export function SegmentedProgress({
   const filledSegments = Math.round((value / 100) * segments);
 
   return (
-    <div className={cn("flex flex-col gap-1.5", className)}>
+    <div className={cn("flex flex-col gap-2", className)}>
       <div className="flex items-end justify-between gap-3">
-        <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+        <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
           Build progress
         </p>
         <p
           className={cn(
-            "font-mono font-semibold tabular-nums text-primary",
-            compact ? "text-lg" : "text-2xl"
+            "font-mono font-semibold tabular-nums",
+            compact ? "text-lg" : "text-3xl",
+            value > 0 ? "text-gradient-ember" : "text-muted-foreground"
           )}
         >
           {displayValue}
-          <span className="text-sm text-muted-foreground">%</span>
+          <span className="ml-0.5 text-base text-muted-foreground">%</span>
         </p>
       </div>
 
@@ -46,10 +47,10 @@ export function SegmentedProgress({
             <div
               key={index}
               className={cn(
-                "h-2 flex-1 rounded-[2px] transition-all duration-300 ease-out",
+                "h-2 flex-1 rounded-[2px] transition-all duration-500 ease-out",
                 isFilled
-                  ? "bg-primary shadow-[0_0_8px_rgba(255,107,26,0.35)]"
-                  : "bg-white/[0.04]",
+                  ? "bg-gradient-to-b from-[#ffb27a] to-[#ff6b1a] shadow-[0_0_10px_rgba(255,107,26,0.45)]"
+                  : "bg-white/[0.05]",
                 isEdge && value > 0 && "animate-pulse-glow"
               )}
             />
@@ -57,7 +58,7 @@ export function SegmentedProgress({
         })}
       </div>
 
-      <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-system/80">
+      <p className="font-mono text-[9px] uppercase tracking-[0.24em] text-system/85">
         {statusLabel}
       </p>
     </div>

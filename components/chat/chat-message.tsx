@@ -18,16 +18,28 @@ function formatText(text: string) {
 
     if (isList) {
       return (
-        <ul key={index} className="my-2 list-disc space-y-1 pl-4">
+        <ul key={index} className="my-2 space-y-1 pl-1">
           {lines.map((line, lineIndex) => (
-            <li key={lineIndex}>{line.replace(/^[-*•]\s*/, "")}</li>
+            <li
+              key={lineIndex}
+              className="flex gap-2 text-[13.5px] leading-relaxed text-foreground/90"
+            >
+              <span className="mt-[7px] size-1 shrink-0 rounded-full bg-primary/70" />
+              <span>{line.replace(/^[-*•]\s*/, "")}</span>
+            </li>
           ))}
         </ul>
       );
     }
 
     return (
-      <p key={index} className={index > 0 ? "mt-3" : undefined}>
+      <p
+        key={index}
+        className={cn(
+          "text-[13.5px] leading-relaxed text-foreground/90",
+          index > 0 && "mt-3"
+        )}
+      >
         {paragraph}
       </p>
     );
@@ -40,17 +52,34 @@ function ToolUpdatePart({ state }: { state?: string }) {
   return (
     <div
       className={cn(
-        "my-2 flex items-center gap-2 rounded-md border px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider",
+        "my-2.5 flex items-center gap-2 overflow-hidden rounded-lg border px-3 py-2 font-mono text-[10px] uppercase tracking-[0.14em]",
         isDone
-          ? "border-primary/20 bg-primary/[0.06] text-primary/80"
-          : "border-system/25 bg-system/[0.06] text-system"
+          ? "border-primary/25 bg-primary/[0.06] text-primary/85"
+          : "border-system/30 bg-system/[0.06] text-system"
       )}
     >
-      <Sparkles
-        className={cn("size-3", !isDone && "animate-pulse")}
-        aria-hidden
-      />
-      {isDone ? "Spec updated" : "Updating agent spec…"}
+      <span
+        className={cn(
+          "relative flex size-1.5 shrink-0 items-center justify-center",
+          !isDone && "before:absolute before:inset-0 before:rounded-full before:bg-system/40 before:animate-ping"
+        )}
+      >
+        <span
+          className={cn(
+            "size-1.5 rounded-full",
+            isDone ? "bg-primary" : "bg-system"
+          )}
+        />
+      </span>
+      <Sparkles className="size-3 opacity-70" aria-hidden />
+      <span>{isDone ? "Spec updated" : "Updating agent spec"}</span>
+      {!isDone && (
+        <span className="ml-auto inline-flex gap-0.5">
+          <span className="size-1 rounded-full bg-system/60 [animation:idle-pulse_1.2s_ease-in-out_infinite]" />
+          <span className="size-1 rounded-full bg-system/60 [animation:idle-pulse_1.2s_ease-in-out_0.2s_infinite]" />
+          <span className="size-1 rounded-full bg-system/60 [animation:idle-pulse_1.2s_ease-in-out_0.4s_infinite]" />
+        </span>
+      )}
     </div>
   );
 }
@@ -68,44 +97,54 @@ export function ChatMessage({ message, isStreaming }: ChatMessageProps) {
   if (!textContent && toolParts.length === 0) return null;
 
   return (
-    <div
-      className={cn(
-        "group flex gap-2.5",
-        isUser ? "flex-row-reverse" : "flex-row"
-      )}
-    >
+    <div className="group flex gap-3">
       <div
         className={cn(
-          "mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md border",
+          "relative mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg border",
           isUser
-            ? "border-white/[0.08] bg-surface-3 text-muted-foreground"
-            : "border-primary/20 bg-primary/[0.08] text-primary"
+            ? "border-white/[0.08] bg-white/[0.03] text-foreground/70"
+            : "border-primary/30 bg-gradient-to-br from-primary/20 to-primary/5 text-primary shadow-[0_0_12px_-2px_rgba(255,107,26,0.45)]"
         )}
       >
         {isUser ? (
-          <User className="size-3.5" aria-hidden />
+          <User className="size-3.5" strokeWidth={1.8} aria-hidden />
         ) : (
-          <Bot className="size-3.5" aria-hidden />
+          <Bot className="size-3.5" strokeWidth={2} aria-hidden />
         )}
       </div>
 
-      <div
-        className={cn(
-          "min-w-0 max-w-[85%] text-sm leading-relaxed",
-          isUser ? "text-right" : "text-left"
-        )}
-      >
-        <div
-          className={cn(
-            "inline-block rounded-xl px-3.5 py-2.5 text-left",
-            isUser
-              ? "border border-white/[0.08] bg-surface-3 text-foreground"
-              : "border border-white/[0.05] bg-surface-2/80 text-foreground/95"
+      <div className="min-w-0 flex-1 pt-0.5">
+        <div className="mb-1 flex items-center gap-2">
+          <span
+            className={cn(
+              "font-mono text-[10px] uppercase tracking-[0.16em]",
+              isUser ? "text-muted-foreground/80" : "text-primary/85"
+            )}
+          >
+            {isUser ? "You" : "Swarm"}
+          </span>
+          {!isUser && isStreaming && (
+            <span className="flex items-center gap-1">
+              <span className="size-1 rounded-full bg-primary [animation:idle-pulse_1s_ease-in-out_infinite]" />
+              <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-primary/70">
+                Streaming
+              </span>
+            </span>
           )}
-        >
-          {textContent ? (
-            <div className="whitespace-pre-wrap">{formatText(textContent)}</div>
-          ) : null}
+        </div>
+
+        <div className="text-foreground/90">
+          {textContent && (
+            <div className="whitespace-pre-wrap">
+              {formatText(textContent)}
+              {isStreaming && !isUser && (
+                <span
+                  className="caret-blink ml-0.5 inline-block h-[14px] w-[2px] translate-y-0.5 bg-primary"
+                  aria-hidden
+                />
+              )}
+            </div>
+          )}
 
           {toolParts.map((part, index) => (
             <ToolUpdatePart
@@ -113,10 +152,6 @@ export function ChatMessage({ message, isStreaming }: ChatMessageProps) {
               state={"state" in part ? String(part.state) : undefined}
             />
           ))}
-
-          {isStreaming && !isUser && (
-            <span className="ml-0.5 inline-block size-1.5 animate-pulse rounded-full bg-primary align-middle" />
-          )}
         </div>
       </div>
     </div>

@@ -15,6 +15,7 @@ import "@xyflow/react/dist/style.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BoardNode, type BoardNodeData } from "@/components/board/board-node";
 import { BoardToolbar } from "@/components/board/board-toolbar";
+import { CanvasEmpty } from "@/components/board/canvas-empty";
 import { HudPanel } from "@/components/hud/hud-panel";
 import {
   agentSpecSchema,
@@ -33,66 +34,6 @@ interface AgentGraphProps {
 const nodeTypes = {
   boardNode: BoardNode,
 };
-
-const PLACEHOLDER_NODES: Node<BoardNodeData>[] = [
-  {
-    id: "ph-agent",
-    type: "boardNode",
-    position: { x: 80, y: 220 },
-    data: {
-      label: "Agent",
-      subtitle: "Persona & role",
-      kind: "agent",
-      placeholder: true,
-    },
-    draggable: false,
-    selectable: false,
-  },
-  {
-    id: "ph-instructions",
-    type: "boardNode",
-    position: { x: 420, y: 220 },
-    data: {
-      label: "Instructions",
-      subtitle: "System prompt",
-      kind: "instructions",
-      placeholder: true,
-    },
-    draggable: false,
-    selectable: false,
-  },
-  {
-    id: "ph-tool",
-    type: "boardNode",
-    position: { x: 420, y: 420 },
-    data: {
-      label: "Tools",
-      subtitle: "Web search, APIs…",
-      kind: "tool",
-      placeholder: true,
-    },
-    draggable: false,
-    selectable: false,
-  },
-];
-
-const PLACEHOLDER_EDGES: Edge[] = [
-  {
-    id: "ph-e1",
-    source: "ph-agent",
-    target: "ph-instructions",
-    style: { stroke: "rgba(255,255,255,0.08)", strokeWidth: 1.5 },
-    markerEnd: { type: MarkerType.ArrowClosed, color: "rgba(255,255,255,0.12)" },
-  },
-  {
-    id: "ph-e2",
-    source: "ph-agent",
-    sourceHandle: "bottom",
-    target: "ph-tool",
-    style: { stroke: "rgba(255,255,255,0.08)", strokeWidth: 1.5, strokeDasharray: "6 4" },
-    markerEnd: { type: MarkerType.ArrowClosed, color: "rgba(255,255,255,0.12)" },
-  },
-];
 
 function buildGraphFromSpec(
   spec: AgentSpec,
@@ -145,7 +86,7 @@ function buildGraphFromSpec(
       animated: !isNew,
       className: isNew ? "edge-draw" : undefined,
       markerEnd: { type: MarkerType.ArrowClosed, color: "#3b82f6" },
-      style: { stroke: "#3b82f6", strokeWidth: 2, opacity: 0.65 },
+      style: { stroke: "#3b82f6", strokeWidth: 1.75, opacity: 0.75 },
     });
   }
 
@@ -175,8 +116,8 @@ function buildGraphFromSpec(
       markerEnd: { type: MarkerType.ArrowClosed, color: "#10b981" },
       style: {
         stroke: "#10b981",
-        strokeWidth: 2,
-        opacity: 0.55,
+        strokeWidth: 1.75,
+        opacity: 0.7,
         strokeDasharray: isNew ? 100 : undefined,
       },
     });
@@ -203,7 +144,13 @@ function buildGraphFromSpec(
 
       const edgeTargets =
         agent.dependsOn.length === 0
-          ? [{ id: `e-persona-${agentId}`, source: personaId, sourceHandle: "bottom" as const }]
+          ? [
+              {
+                id: `e-persona-${agentId}`,
+                source: personaId,
+                sourceHandle: "bottom" as const,
+              },
+            ]
           : agent.dependsOn.map((depId) => ({
               id: `e-${depId}-${agentId}`,
               source: `swarm-${depId}`,
@@ -219,7 +166,7 @@ function buildGraphFromSpec(
           animated: !isNew,
           className: isNew ? "edge-draw" : undefined,
           markerEnd: { type: MarkerType.ArrowClosed, color: "#f59e0b" },
-          style: { stroke: "#f59e0b", strokeWidth: 2, opacity: 0.55 },
+          style: { stroke: "#f59e0b", strokeWidth: 1.75, opacity: 0.7 },
         });
       });
     });
@@ -248,7 +195,7 @@ function BoardCanvas({
 
   const { nodes, edges, newCount } = useMemo(() => {
     if (isEmpty) {
-      return { nodes: PLACEHOLDER_NODES, edges: PLACEHOLDER_EDGES, newCount: 0 };
+      return { nodes: [], edges: [], newCount: 0 };
     }
     const graph = buildGraphFromSpec(validSpec, seenNodeIdsRef.current);
     graph.nodes.forEach((node) => seenNodeIdsRef.current.add(node.id));
@@ -294,32 +241,25 @@ function BoardCanvas({
       />
 
       {isEmpty && (
-        <div className="pointer-events-none absolute inset-x-0 top-14 z-10 flex justify-center px-6">
-          <div className="max-w-md rounded-xl border border-white/[0.06] bg-surface-1/90 px-4 py-3 text-center backdrop-blur-sm">
-            <p className="text-sm font-medium text-foreground">
-              {buildPhase === "discovery"
-                ? "Your workflow will appear here"
-                : "Canvas ready for assembly"}
-            </p>
-            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-              {buildPhase === "discovery"
-                ? "Answer a few questions in chat, then start building to see nodes connect on this board."
-                : "Describe your agent in chat — nodes will appear and connect as the spec is built."}
-            </p>
-            {buildProgress !== undefined && buildProgress > 0 && (
-              <p className="mt-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground/70">
-                {buildProgress}% configured
-              </p>
-            )}
-          </div>
-        </div>
+        <CanvasEmpty buildPhase={buildPhase} buildProgress={buildProgress} />
       )}
 
       {isBuilding && !isEmpty && (
-        <div className="build-scan-line pointer-events-none absolute inset-x-0 top-14 z-10 h-16 bg-gradient-to-b from-transparent via-primary/[0.04] to-transparent" />
+        <>
+          <div className="build-scan-line pointer-events-none absolute inset-x-0 top-14 z-10 h-16 bg-gradient-to-b from-transparent via-primary/[0.06] to-transparent" />
+          {/* Soft global vignette pulse */}
+          <div
+            className="pointer-events-none absolute inset-0 z-10"
+            style={{
+              boxShadow:
+                "inset 0 0 120px -40px rgba(255, 107, 26, 0.18), inset 0 0 200px -80px rgba(255, 107, 26, 0.1)",
+              animation: "idle-pulse 2.4s ease-in-out infinite",
+            }}
+          />
+        </>
       )}
 
-      <div key={pulseKey} className="board-canvas h-full w-full pt-12">
+      <div key={pulseKey} className="board-canvas h-full w-full">
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -340,20 +280,23 @@ function BoardCanvas({
         >
           <Background
             variant={BackgroundVariant.Dots}
-            gap={20}
+            gap={24}
             size={1.2}
-            color="rgba(255,255,255,0.08)"
+            color="rgba(255,255,255,0.06)"
           />
-          <Controls
-            showInteractive={false}
-            position="bottom-left"
-            className="board-controls"
-          />
+          {!isEmpty && (
+            <Controls
+              showInteractive={false}
+              position="bottom-left"
+              className="board-controls"
+            />
+          )}
         </ReactFlow>
       </div>
 
       {newCount > 0 && !isEmpty && (
-        <div className="pointer-events-none absolute bottom-4 left-1/2 z-10 -translate-x-1/2 rounded-full border border-white/10 bg-surface-1/95 px-3.5 py-1.5 text-xs font-medium text-foreground shadow-hud-sm backdrop-blur-sm">
+        <div className="pointer-events-none absolute bottom-5 left-1/2 z-10 -translate-x-1/2 rounded-full border border-primary/30 bg-[#1a1816]/95 px-3.5 py-1.5 text-xs font-medium text-foreground shadow-[0_8px_24px_-8px_rgba(255,107,26,0.5)] backdrop-blur-md">
+          <span className="mr-1.5 inline-block size-1.5 rounded-full bg-primary [animation:idle-pulse_1.4s_ease-in-out_infinite] align-middle" />
           +{newCount} node{newCount > 1 ? "s" : ""} added
         </div>
       )}
@@ -363,7 +306,11 @@ function BoardCanvas({
 
 export function AgentGraph(props: AgentGraphProps) {
   return (
-    <HudPanel tier={2} className="relative h-full min-h-[420px] overflow-hidden">
+    <HudPanel
+      tier={2}
+      className="relative h-full min-h-0 overflow-hidden"
+      glow={props.isBuilding ? "ember" : "none"}
+    >
       <ReactFlowProvider>
         <BoardCanvas {...props} />
       </ReactFlowProvider>
