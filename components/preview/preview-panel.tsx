@@ -3,12 +3,14 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { Play, RotateCcw, Zap } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AgentFrontendFrame } from "@/components/design/agent-frontend-frame";
 import { SwarmOrchestrationTimeline } from "@/components/preview/swarm-orchestration-timeline";
 import { Button } from "@/components/ui/button";
 import { HudError } from "@/components/hud/hud-error";
 import { HudPanel } from "@/components/hud/hud-panel";
+import { useAgentFrontendHtml } from "@/hooks/use-agent-frontend-html";
+import { useDeferredHtml } from "@/hooks/use-deferred-html";
 import { hasWebSearchTool } from "@/lib/agent-prompt";
 import type { AgentSpec } from "@/lib/agent-spec";
 import { dedupeMessagesById } from "@/lib/chat-messages";
@@ -21,6 +23,7 @@ import type { MemoryWriteEvent } from "@/lib/swarm-memory";
 interface PreviewPanelProps {
   agentSpec: AgentSpec;
   onMemoryUpdate?: (event: MemoryWriteEvent) => void;
+  isActive?: boolean;
 }
 
 function getAssistantText(message: PreviewUIMessage): string {
@@ -30,7 +33,13 @@ function getAssistantText(message: PreviewUIMessage): string {
     .join("");
 }
 
-export function PreviewPanel({ agentSpec, onMemoryUpdate }: PreviewPanelProps) {
+export function PreviewPanel({
+  agentSpec,
+  onMemoryUpdate,
+  isActive = true,
+}: PreviewPanelProps) {
+  const frontendHtml = useAgentFrontendHtml(agentSpec);
+  const displayHtml = useDeferredHtml(frontendHtml, isActive);
   const [orchestrationSteps, setOrchestrationSteps] = useState<
     OrchestrationStep[]
   >([]);
@@ -50,9 +59,9 @@ export function PreviewPanel({ agentSpec, onMemoryUpdate }: PreviewPanelProps) {
     []
   );
 
-  const { messages, sendMessage, status, error, stop, setMessages } =
-    useChat<PreviewUIMessage>({
-      transport: new DefaultChatTransport({
+  const transport = useMemo(
+    () =>
+      new DefaultChatTransport({
         api: "/api/preview",
         prepareSendMessagesRequest: ({ messages, id }) => ({
           body: {
@@ -62,6 +71,12 @@ export function PreviewPanel({ agentSpec, onMemoryUpdate }: PreviewPanelProps) {
           },
         }),
       }),
+    []
+  );
+
+  const { messages, sendMessage, status, error, stop, setMessages } =
+    useChat<PreviewUIMessage>({
+      transport,
       onData: (dataPart) => {
         if (dataPart.type === "data-orchestration") {
           setOrchestrationSteps(dataPart.data.steps);
@@ -169,7 +184,7 @@ export function PreviewPanel({ agentSpec, onMemoryUpdate }: PreviewPanelProps) {
       )}
 
       <AgentFrontendFrame
-        agentSpec={agentSpec}
+        html={displayHtml}
         mode="live"
         iframeRef={iframeRef}
         title={`${agentSpec.name} preview`}

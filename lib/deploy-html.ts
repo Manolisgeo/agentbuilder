@@ -23,16 +23,50 @@ export function getDeployCustomCss(spec: AgentSpec): string {
   );
 }
 
+const SCRIPT_TAG_RE = /<script[\s\S]*?<\/script>/gi;
+
+const previewSrcDocCache = new Map<string, string>();
+const PREVIEW_SRCDOC_CACHE_MAX = 16;
+
+function previewSrcDocCacheKey(html: string, mode: FrontendFrameMode): string {
+  return `${mode}\0${html}`;
+}
+
+function rememberPreviewSrcDoc(key: string, value: string): string {
+  if (previewSrcDocCache.size >= PREVIEW_SRCDOC_CACHE_MAX) {
+    const oldest = previewSrcDocCache.keys().next().value;
+    if (oldest) previewSrcDocCache.delete(oldest);
+  }
+  previewSrcDocCache.set(key, value);
+  return value;
+}
+
+/** Build iframe srcDoc from raw HTML — cached because design/live transforms are expensive. */
+export function getPreviewSrcDoc(
+  html: string,
+  mode: FrontendFrameMode = "static"
+): string {
+  const key = previewSrcDocCacheKey(html, mode);
+  const cached = previewSrcDocCache.get(key);
+  if (cached !== undefined) return cached;
+
+  let result: string;
+  if (mode === "design") {
+    result = injectDesignInspector(html.replace(SCRIPT_TAG_RE, ""));
+  } else {
+    result = prepareFrontendHtml(html, mode === "live" ? "live" : "static");
+  }
+
+  return rememberPreviewSrcDoc(key, result);
+}
+
 export function getPreviewHtml(
   spec: AgentSpec,
   options?: { mode?: FrontendFrameMode }
 ): string {
   const mode = options?.mode ?? "static";
   const html = getAgentFrontendHtml(spec) ?? FRONTEND_PLACEHOLDER_HTML;
-  if (mode === "design") {
-    return injectDesignInspector(html.replace(/<script[\s\S]*?<\/script>/gi, ""));
-  }
-  return prepareFrontendHtml(html, mode === "live" ? "live" : "static");
+  return getPreviewSrcDoc(html, mode);
 }
 
 export function buildDeployThemeCss(spec: AgentSpec): string {

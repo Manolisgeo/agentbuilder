@@ -1,6 +1,7 @@
 "use client";
 
 import { LayoutGrid, Palette, Play } from "lucide-react";
+import { startTransition, useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { AgentGraph } from "@/components/agent-graph";
 import { DesignPreviewPanel } from "@/components/design/design-preview-panel";
@@ -50,6 +51,18 @@ export function CenterPanel({
   const canPreview = isAgentPreviewReady(agentSpec);
   const hasFrontend = hasAgentFrontend(agentSpec);
   const activeIndex = VIEW_OPTIONS.findIndex((option) => option.id === view);
+  const [mountedViews, setMountedViews] = useState<Set<CenterView>>(
+    () => new Set(["canvas"])
+  );
+
+  useEffect(() => {
+    setMountedViews((prev) => {
+      if (prev.has(view)) return prev;
+      const next = new Set(prev);
+      next.add(view);
+      return next;
+    });
+  }, [view]);
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
@@ -85,7 +98,10 @@ export function CenterPanel({
             <button
               key={option.id}
               type="button"
-              onClick={() => !disabled && onViewChange(option.id)}
+              onClick={() => {
+                if (disabled) return;
+                startTransition(() => onViewChange(option.id));
+              }}
               disabled={disabled}
               title={
                 disabled
@@ -113,8 +129,14 @@ export function CenterPanel({
         })}
       </div>
 
-      <div className="min-h-0 flex-1">
-        {view === "canvas" ? (
+      <div className="relative min-h-0 flex-1">
+        <div
+          className={cn(
+            "absolute inset-0 flex min-h-0 flex-col",
+            view !== "canvas" && "hidden"
+          )}
+          aria-hidden={view !== "canvas"}
+        >
           <AgentGraph
             spec={agentSpec}
             isBuilding={isBuilding}
@@ -122,17 +144,38 @@ export function CenterPanel({
             buildPhase={buildPhase}
             memoryState={memoryState}
           />
-        ) : view === "design" ? (
-          <DesignPreviewPanel
-            agentSpec={agentSpec}
-            onSpecUpdate={onSpecUpdate}
-          />
-        ) : (
-          <PreviewPanel
-            key={JSON.stringify(agentSpec)}
-            agentSpec={agentSpec}
-            onMemoryUpdate={onMemoryUpdate}
-          />
+        </div>
+
+        {mountedViews.has("design") && (
+          <div
+            className={cn(
+              "absolute inset-0 flex min-h-0 flex-col",
+              view !== "design" && "hidden"
+            )}
+            aria-hidden={view !== "design"}
+          >
+            <DesignPreviewPanel
+              agentSpec={agentSpec}
+              onSpecUpdate={onSpecUpdate}
+              isActive={view === "design"}
+            />
+          </div>
+        )}
+
+        {mountedViews.has("preview") && (
+          <div
+            className={cn(
+              "absolute inset-0 flex min-h-0 flex-col",
+              view !== "preview" && "hidden"
+            )}
+            aria-hidden={view !== "preview"}
+          >
+            <PreviewPanel
+              agentSpec={agentSpec}
+              onMemoryUpdate={onMemoryUpdate}
+              isActive={view === "preview"}
+            />
+          </div>
         )}
       </div>
     </div>

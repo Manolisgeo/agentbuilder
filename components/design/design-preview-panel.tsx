@@ -6,7 +6,8 @@ import { AgentFrontendFrame } from "@/components/design/agent-frontend-frame";
 import { DesignElementChat } from "@/components/design/design-element-chat";
 import { ResizableDesignSplit } from "@/components/design/resizable-design-split";
 import { HudPanel } from "@/components/hud/hud-panel";
-import { hasAgentFrontend } from "@/lib/deploy-html";
+import { useAgentFrontendHtml } from "@/hooks/use-agent-frontend-html";
+import { useDeferredHtml } from "@/hooks/use-deferred-html";
 import { getPlatformLabel } from "@/lib/agent-ui";
 import type { AgentSpec } from "@/lib/agent-spec";
 import {
@@ -18,20 +19,22 @@ import {
 interface DesignPreviewPanelProps {
   agentSpec: AgentSpec;
   onSpecUpdate?: (spec: AgentSpec) => void;
+  isActive?: boolean;
 }
 
 export function DesignPreviewPanel({
   agentSpec,
   onSpecUpdate,
+  isActive = true,
 }: DesignPreviewPanelProps) {
   const platform = agentSpec.deployment?.platform ?? "html";
-  const hasFrontend = hasAgentFrontend(agentSpec);
+  const frontendHtml = useAgentFrontendHtml(agentSpec);
+  const displayHtml = useDeferredHtml(frontendHtml, isActive);
+  const hasFrontend = Boolean(frontendHtml?.trim());
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [selection, setSelection] = useState<DesignSelection | null>(null);
 
-  const htmlContent = agentSpec.deployment?.files.find(
-    (f) => f.path === "index.html"
-  )?.content;
+  const htmlContent = frontendHtml;
 
   const handleMessage = useCallback((event: MessageEvent) => {
     if (event.data?.type !== DESIGN_SELECT_MESSAGE) return;
@@ -58,7 +61,7 @@ export function DesignPreviewPanel({
 
   const previewFrame = (
     <AgentFrontendFrame
-      agentSpec={agentSpec}
+      html={displayHtml}
       mode="design"
       iframeRef={iframeRef}
       title={`${agentSpec.name} design`}
