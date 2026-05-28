@@ -3,10 +3,11 @@
   "checkpoint_id": "83afa5251f38",
   "strategy": "manual-commit",
   "branch": "main",
-  "checkpoints_count": 1,
+  "checkpoints_count": 2,
   "files_touched": [
     "app/agents/page.tsx",
-    "components/actions-panel.tsx"
+    "components/actions-panel.tsx",
+    "lib/agent-storage.ts"
   ],
   "sessions": [
     {
@@ -14,6 +15,12 @@
       "transcript": "/83/afa5251f38/0/full.jsonl",
       "content_hash": "/83/afa5251f38/0/content_hash.txt",
       "prompt": "/83/afa5251f38/0/prompt.txt"
+    },
+    {
+      "metadata": "/83/afa5251f38/1/metadata.json",
+      "transcript": "/83/afa5251f38/1/full.jsonl",
+      "content_hash": "/83/afa5251f38/1/content_hash.txt",
+      "prompt": "/83/afa5251f38/1/prompt.txt"
     }
   ]
 }
