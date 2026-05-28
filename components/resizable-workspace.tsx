@@ -130,7 +130,10 @@ export function ResizableWorkspace({
   className,
 }: ResizableWorkspaceProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [widths, setWidths] = useState<PanelWidths>(() => readStoredWidths());
+  const [widths, setWidths] = useState<PanelWidths>({
+    left: DEFAULT_LEFT,
+    right: DEFAULT_RIGHT,
+  });
   const widthsRef = useRef(widths);
   widthsRef.current = widths;
 
@@ -142,6 +145,10 @@ export function ResizableWorkspace({
     }
     setWidths(clampWidths(next, containerWidth));
   }, []);
+
+  useEffect(() => {
+    applyWidths(readStoredWidths());
+  }, [applyWidths]);
 
   useEffect(() => {
     try {
@@ -195,7 +202,7 @@ export function ResizableWorkspace({
       >
         <div
           className="panel-enter flex h-full min-h-0 shrink-0 flex-col"
-          style={{ width: widths.left, animationDelay: "80ms" }}
+          style={{ width: `${widths.left}px`, animationDelay: "80ms" }}
         >
           {left}
         </div>
@@ -213,7 +220,7 @@ export function ResizableWorkspace({
 
         <div
           className="panel-enter flex h-full min-h-0 shrink-0 flex-col"
-          style={{ width: widths.right, animationDelay: "240ms" }}
+          style={{ width: `${widths.right}px`, animationDelay: "240ms" }}
         >
           {right}
         </div>

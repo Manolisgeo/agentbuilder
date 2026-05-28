@@ -18,7 +18,7 @@ import { HudError } from "@/components/hud/hud-error";
 import { HudPanel } from "@/components/hud/hud-panel";
 import type { AgentSpec } from "@/lib/agent-spec";
 import type { BuildPhase } from "@/lib/build-phase";
-import type { SwarmUIMessage } from "@/lib/chat-types";
+import type { PlanStepStatus, SwarmUIMessage } from "@/lib/chat-types";
 
 interface ChatPanelProps {
   agentSpec: AgentSpec;
@@ -65,6 +65,9 @@ export function ChatPanel({
   onBuildingChange,
 }: ChatPanelProps) {
   const [input, setInput] = useState("");
+  const [planStepOverrides, setPlanStepOverrides] = useState<
+    Record<string, PlanStepStatus>
+  >({});
   const agentSpecRef = useRef(agentSpec);
   const buildPhaseRef = useRef(buildPhase);
   const scrollAnchorRef = useRef<HTMLDivElement>(null);
@@ -85,11 +88,14 @@ export function ChatPanel({
       }),
     }),
     onData: (dataPart) => {
-      if (
-        dataPart.type === "data-agentSpec" &&
-        buildPhaseRef.current === "building"
-      ) {
+      if (dataPart.type === "data-agentSpec") {
         onSpecUpdate(dataPart.data);
+      }
+      if (dataPart.type === "data-planStep") {
+        setPlanStepOverrides((prev) => ({
+          ...prev,
+          [dataPart.data.stepId]: dataPart.data.status,
+        }));
       }
     },
     onError: (err) => {
@@ -197,8 +203,8 @@ export function ChatPanel({
                   Let&apos;s design your agent together
                 </p>
                 <p className="relative mt-1.5 text-[12.5px] leading-relaxed text-muted-foreground">
-                  I&apos;ll ask a few questions about purpose, tone, and
-                  capabilities, then we&apos;ll assemble the spec together.
+                  I can research topics, create a build plan, and assemble your
+                  agent architecture — no need to keep saying &ldquo;continue.&rdquo;
                 </p>
               </div>
 
@@ -239,6 +245,7 @@ export function ChatPanel({
               key={message.id}
               message={message}
               isStreaming={message.id === streamingAssistantId}
+              planStepOverrides={planStepOverrides}
             />
           ))}
 
@@ -269,8 +276,8 @@ export function ChatPanel({
           isBusy={isBusy}
           placeholder={
             isDiscovery
-              ? "Describe your agent or answer a question…"
-              : "Refine the agent spec…"
+              ? "Describe your agent, ask for research, or request a plan…"
+              : "Refine nodes, add tools, or restructure the architecture…"
           }
         />
       </div>

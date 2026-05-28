@@ -1,12 +1,15 @@
 "use client";
 
-import { Bot, Sparkles, User } from "lucide-react";
-import type { UIMessage } from "ai";
+import { Bot, User } from "lucide-react";
+import { getToolName, isToolUIPart, type UIMessage } from "ai";
+import { ToolCallDisplay } from "@/components/chat/tool-call-display";
+import type { PlanStepStatus } from "@/lib/chat-types";
 import { cn } from "@/lib/utils";
 
 interface ChatMessageProps {
   message: UIMessage;
   isStreaming?: boolean;
+  planStepOverrides?: Record<string, PlanStepStatus>;
 }
 
 function formatText(text: string) {
@@ -46,49 +49,15 @@ function formatText(text: string) {
   });
 }
 
-function ToolUpdatePart({ state }: { state?: string }) {
-  const isDone = state === "output-available" || state === "output-error";
-
-  return (
-    <div
-      className={cn(
-        "my-2.5 flex items-center gap-2 overflow-hidden rounded-lg border px-3 py-2 font-mono text-[10px] uppercase tracking-[0.14em]",
-        isDone
-          ? "border-primary/25 bg-primary/[0.06] text-primary/85"
-          : "border-system/30 bg-system/[0.06] text-system"
-      )}
-    >
-      <span
-        className={cn(
-          "relative flex size-1.5 shrink-0 items-center justify-center",
-          !isDone && "before:absolute before:inset-0 before:rounded-full before:bg-system/40 before:animate-ping"
-        )}
-      >
-        <span
-          className={cn(
-            "size-1.5 rounded-full",
-            isDone ? "bg-primary" : "bg-system"
-          )}
-        />
-      </span>
-      <Sparkles className="size-3 opacity-70" aria-hidden />
-      <span>{isDone ? "Spec updated" : "Updating agent spec"}</span>
-      {!isDone && (
-        <span className="ml-auto inline-flex gap-0.5">
-          <span className="size-1 rounded-full bg-system/60 [animation:idle-pulse_1.2s_ease-in-out_infinite]" />
-          <span className="size-1 rounded-full bg-system/60 [animation:idle-pulse_1.2s_ease-in-out_0.2s_infinite]" />
-          <span className="size-1 rounded-full bg-system/60 [animation:idle-pulse_1.2s_ease-in-out_0.4s_infinite]" />
-        </span>
-      )}
-    </div>
-  );
-}
-
-export function ChatMessage({ message, isStreaming }: ChatMessageProps) {
+export function ChatMessage({
+  message,
+  isStreaming,
+  planStepOverrides,
+}: ChatMessageProps) {
   const isUser = message.role === "user";
 
   const textParts = message.parts.filter((part) => part.type === "text");
-  const toolParts = message.parts.filter((part) => part.type.startsWith("tool-"));
+  const toolParts = message.parts.filter((part) => isToolUIPart(part));
   const textContent = textParts
     .map((part) => (part.type === "text" ? part.text : ""))
     .join("")
@@ -127,7 +96,7 @@ export function ChatMessage({ message, isStreaming }: ChatMessageProps) {
             <span className="flex items-center gap-1">
               <span className="size-1 rounded-full bg-primary [animation:idle-pulse_1s_ease-in-out_infinite]" />
               <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-primary/70">
-                Streaming
+                Working
               </span>
             </span>
           )}
@@ -146,12 +115,22 @@ export function ChatMessage({ message, isStreaming }: ChatMessageProps) {
             </div>
           )}
 
-          {toolParts.map((part, index) => (
-            <ToolUpdatePart
-              key={index}
-              state={"state" in part ? String(part.state) : undefined}
-            />
-          ))}
+          {toolParts.map((part) => {
+            if (!isToolUIPart(part)) return null;
+            const toolName = getToolName(part);
+            return (
+              <ToolCallDisplay
+                key={part.toolCallId}
+                toolName={toolName}
+                state={"state" in part ? String(part.state) : undefined}
+                input={"input" in part ? part.input : undefined}
+                output={
+                  part.state === "output-available" ? part.output : undefined
+                }
+                stepOverrides={planStepOverrides}
+              />
+            );
+          })}
         </div>
       </div>
     </div>

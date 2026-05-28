@@ -40,10 +40,9 @@ export function ChatComposer({
         <textarea
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          placeholder={placeholder}
+          placeholder={isBusy ? "Type your next message while Swarm works…" : placeholder}
           rows={1}
-          disabled={isBusy}
-          className="block max-h-40 min-h-[48px] w-full resize-none bg-transparent px-4 py-3.5 text-[14px] leading-relaxed outline-none placeholder:text-muted-foreground/60 disabled:opacity-60"
+          className="block max-h-40 min-h-[48px] w-full resize-none bg-transparent px-4 py-3.5 text-[14px] leading-relaxed outline-none placeholder:text-muted-foreground/60"
           onKeyDown={(event) => {
             if (event.key === "Enter" && !event.shiftKey) {
               event.preventDefault();
@@ -61,11 +60,17 @@ export function ChatComposer({
           <div className="flex items-center gap-2 pl-1">
             <Sparkles className="size-3 text-primary/60" aria-hidden />
             <span className="text-[10px] text-muted-foreground/70">
-              <kbd>Enter</kbd>
-              <span className="mx-1">to send</span>
-              <kbd>⇧</kbd>
-              <kbd>↵</kbd>
-              <span className="ml-1">for newline</span>
+              {isBusy ? (
+                <>Send when Swarm finishes</>
+              ) : (
+                <>
+                  <kbd>Enter</kbd>
+                  <span className="mx-1">to send</span>
+                  <kbd>⇧</kbd>
+                  <kbd>↵</kbd>
+                  <span className="ml-1">for newline</span>
+                </>
+              )}
             </span>
           </div>
 
