@@ -1,0 +1,106 @@
+{
+  "cli_version": "0.6.3",
+  "checkpoint_id": "3fb0c3f3e75b",
+  "session_id": "398245fa-a769-467e-b4ae-bd0996da5227",
+  "strategy": "manual-commit",
+  "created_at": "2026-05-28T09:30:40.598612Z",
+  "branch": "main",
+  "checkpoints_count": 4,
+  "files_touched": [
+    "app/api/preview/route.ts",
+    "app/globals.css",
+    "app/page.tsx",
+    "components/actions-panel.tsx",
+    "components/agent-graph.tsx",
+    "components/board/board-node.tsx",
+    "components/center-panel.tsx",
+    "components/chat-panel.tsx",
+    "components/clarify-modal.tsx",
+    "components/memory-panel.tsx",
+    "components/preview/preview-panel.tsx",
+    "docs/CHANGELOG.md",
+    "lib/agent-mutations.ts",
+    "lib/agent-prompt.ts",
+    "lib/agent-spec.ts",
+    "lib/build-progress.ts",
+    "lib/chat-tools.ts",
+    "lib/chat-types.ts",
+    "lib/clarify-types.ts",
+    "lib/export.ts",
+    "lib/orchestrator-prompt.ts",
+    "lib/swarm-memory.ts"
+  ],
+  "agent": "Cursor",
+  "model": "claude-sonnet-4-6",
+  "turn_id": "6bf36027512f",
+  "session_metrics": {
+    "turn_count": 4
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-05-28T09:30:40.594061Z",
+    "agent_lines": 1027,
+    "agent_removed": 42,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 12,
+    "total_committed": 1027,
+    "total_lines_changed": 1081,
+    "agent_percentage": 98.88991674375578,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 1366,
+      "user_lines_removed": 12,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".playwright-mcp/console-2026-05-28T08-59-05-012Z.log": 15,
+        ".playwright-mcp/console-2026-05-28T08-59-19-331Z.log": 37,
+        ".playwright-mcp/console-2026-05-28T09-09-41-492Z.log": 69,
+        ".playwright-mcp/page-2026-05-28T08-59-05-795Z.yml": 148,
+        ".playwright-mcp/page-2026-05-28T08-59-19-650Z.yml": 148,
+        ".playwright-mcp/page-2026-05-28T09-09-42-299Z.yml": 148,
+        ".playwright-mcp/page-2026-05-28T09-09-54-960Z.yml": 193,
+        ".playwright-mcp/page-2026-05-28T09-10-27-427Z.yml": 193,
+        "components/chat-panel.tsx": 9,
+        "components/clarify-modal.tsx": 400,
+        "lib/clarify-types.ts": 4,
+        "lib/orchestrator-prompt.ts": 2
+      },
+      "user_removed_per_file": {
+        "components/chat-panel.tsx": 10,
+        "lib/clarify-types.ts": 1,
+        "lib/orchestrator-prompt.ts": 1
+      }
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 616,
+      "user_lines_removed": 0,
+      "agent_lines_added": 11651,
+      "agent_lines_removed": 54,
+      "user_added_per_file": {
+        ".playwright-mcp/console-2026-05-28T09-22-02-235Z.log": 616
+      }
+    },
+    {
+      "checkpoint_number": 3,
+      "user_lines_added": 616,
+      "user_lines_removed": 0,
+      "agent_lines_added": 11651,
+      "agent_lines_removed": 54,
+      "user_added_per_file": {
+        ".playwright-mcp/console-2026-05-28T09-22-02-235Z.log": 616
+      }
+    },
+    {
+      "checkpoint_number": 4,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    }
+  ]
+}

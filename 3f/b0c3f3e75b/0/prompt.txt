@@ -1,0 +1,25 @@
+/implement /Users/jacob/Documents/Projects/buildingprep/agentsbuilder/docs/plans/shared-agent-memory.md
+
+---
+
+/implement /Users/jacob/Documents/Projects/buildingprep/agentsbuilder/docs/plans/shared-agent-memory.md
+
+---
+
+summarize everything you did and the features and next features into a markdown file
+
+---
+
+summarize everything you did and the features and next features into a markdown file
+
+---
+
+summarize everything you did and the features and next features into a markdown file
+
+---
+
+summarize everything you did and the features and next features into a markdown file.
+
+---
+
+summarize everything you did and the features and next features into a markdown file.
