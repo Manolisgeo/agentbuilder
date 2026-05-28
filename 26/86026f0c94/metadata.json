@@ -1,0 +1,30 @@
+{
+  "cli_version": "0.6.3",
+  "checkpoint_id": "2686026f0c94",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".playwright-mcp/console-2026-05-28T08-59-05-012Z.log",
+    ".playwright-mcp/console-2026-05-28T08-59-19-331Z.log",
+    ".playwright-mcp/console-2026-05-28T09-09-41-492Z.log",
+    ".playwright-mcp/console-2026-05-28T09-22-02-235Z.log",
+    ".playwright-mcp/page-2026-05-28T08-59-05-795Z.yml",
+    ".playwright-mcp/page-2026-05-28T08-59-19-650Z.yml",
+    ".playwright-mcp/page-2026-05-28T09-09-42-299Z.yml",
+    ".playwright-mcp/page-2026-05-28T09-09-54-960Z.yml",
+    ".playwright-mcp/page-2026-05-28T09-10-27-427Z.yml",
+    ".playwright-mcp/page-2026-05-28T09-22-03-245Z.yml",
+    "after-oauth-impl.png",
+    "builder-page.png",
+    "clarify-modal-test.png"
+  ],
+  "sessions": [
+    {
+      "metadata": "/26/86026f0c94/0/metadata.json",
+      "transcript": "/26/86026f0c94/0/full.jsonl",
+      "content_hash": "/26/86026f0c94/0/content_hash.txt",
+      "prompt": "/26/86026f0c94/0/prompt.txt"
+    }
+  ]
+}
