@@ -1,0 +1,19 @@
+{
+  "cli_version": "0.6.3",
+  "checkpoint_id": "83afa5251f38",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "app/agents/page.tsx",
+    "components/actions-panel.tsx"
+  ],
+  "sessions": [
+    {
+      "metadata": "/83/afa5251f38/0/metadata.json",
+      "transcript": "/83/afa5251f38/0/full.jsonl",
+      "content_hash": "/83/afa5251f38/0/content_hash.txt",
+      "prompt": "/83/afa5251f38/0/prompt.txt"
+    }
+  ]
+}
