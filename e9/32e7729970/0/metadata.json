@@ -1,0 +1,80 @@
+{
+  "cli_version": "0.6.3",
+  "checkpoint_id": "e932e7729970",
+  "session_id": "a8970386-8fad-4281-b82c-78c92fd51a24",
+  "strategy": "manual-commit",
+  "created_at": "2026-05-28T10:56:05.768394Z",
+  "branch": "main",
+  "checkpoints_count": 3,
+  "files_touched": [
+    "app/globals.css",
+    "app/layout.tsx",
+    "app/page.tsx",
+    "components/agent-graph.tsx",
+    "components/app-sidebar.tsx",
+    "components/board/board-node.tsx",
+    "components/board/board-toolbar.tsx",
+    "components/board/canvas-empty.tsx",
+    "components/center-panel.tsx",
+    "components/chat-panel.tsx",
+    "components/chat/chat-composer.tsx",
+    "components/chat/chat-message.tsx",
+    "components/chat/plan-steps.tsx",
+    "components/chat/tool-call-display.tsx",
+    "components/clarify-card.tsx",
+    "components/clarify-modal.tsx",
+    "components/codegen-graph.tsx",
+    "components/error-boundary.tsx",
+    "components/hud/build-stepper.tsx",
+    "components/hud/idle-reticle.tsx",
+    "components/hud/segmented-progress.tsx",
+    "components/memory-panel.tsx",
+    "components/preview/preview-panel.tsx",
+    "components/preview/swarm-orchestration-timeline.tsx",
+    "components/preview/web-search-display.tsx",
+    "components/resizable-workspace.tsx",
+    "package-lock.json",
+    "package.json"
+  ],
+  "agent": "Cursor",
+  "model": "claude-sonnet-4-6",
+  "turn_id": "16b5d8f4fd44",
+  "session_metrics": {
+    "turn_count": 3
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-05-28T10:56:05.765516Z",
+    "agent_lines": 364,
+    "agent_removed": 228,
+    "human_added": 35,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 399,
+    "total_lines_changed": 627,
+    "agent_percentage": 94.41786283891547,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    },
+    {
+      "checkpoint_number": 3,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 12030,
+      "agent_lines_removed": 266
+    },
+    {
+      "checkpoint_number": 4,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 12030,
+      "agent_lines_removed": 266
+    }
+  ]
+}

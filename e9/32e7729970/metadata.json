@@ -1,0 +1,45 @@
+{
+  "cli_version": "0.6.3",
+  "checkpoint_id": "e932e7729970",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 3,
+  "files_touched": [
+    "app/globals.css",
+    "app/layout.tsx",
+    "app/page.tsx",
+    "components/agent-graph.tsx",
+    "components/app-sidebar.tsx",
+    "components/board/board-node.tsx",
+    "components/board/board-toolbar.tsx",
+    "components/board/canvas-empty.tsx",
+    "components/center-panel.tsx",
+    "components/chat-panel.tsx",
+    "components/chat/chat-composer.tsx",
+    "components/chat/chat-message.tsx",
+    "components/chat/plan-steps.tsx",
+    "components/chat/tool-call-display.tsx",
+    "components/clarify-card.tsx",
+    "components/clarify-modal.tsx",
+    "components/codegen-graph.tsx",
+    "components/error-boundary.tsx",
+    "components/hud/build-stepper.tsx",
+    "components/hud/idle-reticle.tsx",
+    "components/hud/segmented-progress.tsx",
+    "components/memory-panel.tsx",
+    "components/preview/preview-panel.tsx",
+    "components/preview/swarm-orchestration-timeline.tsx",
+    "components/preview/web-search-display.tsx",
+    "components/resizable-workspace.tsx",
+    "package-lock.json",
+    "package.json"
+  ],
+  "sessions": [
+    {
+      "metadata": "/e9/32e7729970/0/metadata.json",
+      "transcript": "/e9/32e7729970/0/full.jsonl",
+      "content_hash": "/e9/32e7729970/0/content_hash.txt",
+      "prompt": "/e9/32e7729970/0/prompt.txt"
+    }
+  ]
+}
