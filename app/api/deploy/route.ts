@@ -119,6 +119,7 @@ export async function POST(req: Request) {
           const agentConfig: {
             slots: Record<string, SlotInput>;
             searchApiKey?: string;
+            voice?: { voiceId: string; ttsModel?: string; sttModel?: string };
           } = {
             slots: {},
             // Env var is the authoritative source; body input is a fallback.
@@ -132,6 +133,25 @@ export async function POST(req: Request) {
           // (via setEnvVar). They are the primary secret source — server env
           // vars are a global fallback for advanced users.
           const envVars = spec.envVars ?? {};
+
+          // ElevenLabs voice (optional): voiceId/models come from the deploy
+          // form; the key from spec.envVars / server env / form input.
+          const voice = inputs.voice;
+          const elKey =
+            envVars.ELEVENLABS_API_KEY ||
+            process.env.ELEVENLABS_API_KEY ||
+            voice?.apiKey;
+          if (voice?.enabled && voice.voiceId && elKey) {
+            agentConfig.voice = {
+              voiceId: voice.voiceId,
+              ttsModel: voice.ttsModel,
+              sttModel: voice.sttModel,
+            };
+          } else if (voice?.enabled && !elKey) {
+            log("WARNING: Voice enabled but no ElevenLabs API key provided.");
+          } else if (voice?.enabled && !voice.voiceId) {
+            log("WARNING: Voice enabled but no voice ID selected.");
+          }
 
           let needsGmail = false;
           for (const c of plan) {
@@ -216,6 +236,8 @@ export async function POST(req: Request) {
               AGENT_CONFIG: JSON.stringify(agentConfig),
             };
             if (agentConfig.searchApiKey) env.TAVILY_API_KEY = "(set in Railway)";
+            if (agentConfig.voice && elKey)
+              env.ELEVENLABS_API_KEY = "(set in Railway)";
             if (gmailEnv) Object.assign(env, gmailEnv);
             log("Railway bundle ready (it builds the Dockerfile).");
             log(
@@ -269,6 +291,9 @@ export async function POST(req: Request) {
           }
           args.push(...fileMounts);
           args.push("-e", `AGENT_CONFIG=${JSON.stringify(agentConfig)}`);
+          if (agentConfig.voice && elKey) {
+            args.push("-e", `ELEVENLABS_API_KEY=${elKey}`);
+          }
           if (gmailEnv) {
             for (const [k, v] of Object.entries(gmailEnv)) {
               args.push("-e", `${k}=${v}`);
