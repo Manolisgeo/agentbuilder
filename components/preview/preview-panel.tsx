@@ -1,16 +1,25 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport, type UIMessage } from "ai";
-import { Bot, RotateCcw, Sparkles } from "lucide-react";
+import { DefaultChatTransport } from "ai";
+import { Bot, RotateCcw, Sparkles, Zap } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ChatComposer } from "@/components/chat/chat-composer";
 import { ChatMessage } from "@/components/chat/chat-message";
+import { SwarmOrchestrationTimeline } from "@/components/preview/swarm-orchestration-timeline";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { HudError } from "@/components/hud/hud-error";
 import { HudPanel } from "@/components/hud/hud-panel";
+import {
+  hasWebSearchTool,
+  isAgentPreviewReady,
+} from "@/lib/agent-prompt";
 import type { AgentSpec } from "@/lib/agent-spec";
+import type {
+  OrchestrationStep,
+  PreviewUIMessage,
+} from "@/lib/preview-types";
 
 interface PreviewPanelProps {
   agentSpec: AgentSpec;
@@ -18,17 +27,25 @@ interface PreviewPanelProps {
 
 const DEFAULT_STARTERS = [
   "Hi! What can you help me with?",
-  "Walk me through an example of how you'd assist me.",
+  "Summarize today's AI funding news.",
+  "What are the latest developments I should know about?",
 ];
 
 export function PreviewPanel({ agentSpec }: PreviewPanelProps) {
   const [input, setInput] = useState("");
+  const [orchestrationSteps, setOrchestrationSteps] = useState<
+    OrchestrationStep[]
+  >([]);
   const agentSpecRef = useRef(agentSpec);
   const scrollAnchorRef = useRef<HTMLDivElement>(null);
   agentSpecRef.current = agentSpec;
 
+  const isSwarm = Boolean(agentSpec.agents?.length);
+  const hasLiveSearch = hasWebSearchTool(agentSpec);
+  const isReady = isAgentPreviewReady(agentSpec);
+
   const { messages, sendMessage, status, error, stop, setMessages } =
-    useChat<UIMessage>({
+    useChat<PreviewUIMessage>({
       transport: new DefaultChatTransport({
         api: "/api/preview",
         prepareSendMessagesRequest: ({ messages, id }) => ({
@@ -39,12 +56,23 @@ export function PreviewPanel({ agentSpec }: PreviewPanelProps) {
           },
         }),
       }),
+      onData: (dataPart) => {
+        if (dataPart.type === "data-orchestration") {
+          setOrchestrationSteps(dataPart.data.steps);
+        }
+      },
     });
 
   const isBusy = status === "submitted" || status === "streaming";
   const lastMessage = messages.at(-1);
   const streamingAssistantId =
     isBusy && lastMessage?.role === "assistant" ? lastMessage.id : null;
+
+  useEffect(() => {
+    if (status === "submitted") {
+      setOrchestrationSteps([]);
+    }
+  }, [status]);
 
   useEffect(() => {
     const anchor = scrollAnchorRef.current;
@@ -67,11 +95,11 @@ export function PreviewPanel({ agentSpec }: PreviewPanelProps) {
         behavior: "smooth",
       });
     }
-  }, [messages, isBusy]);
+  }, [messages, isBusy, orchestrationSteps]);
 
   function submitPrompt(text: string) {
     const trimmed = text.trim();
-    if (!trimmed || isBusy) return;
+    if (!trimmed || isBusy || !isReady) return;
     sendMessage({ text: trimmed });
     setInput("");
   }
@@ -79,16 +107,23 @@ export function PreviewPanel({ agentSpec }: PreviewPanelProps) {
   function resetConversation() {
     if (isBusy) stop();
     setMessages([]);
+    setOrchestrationSteps([]);
     setInput("");
   }
+
+  const statusLine = hasLiveSearch
+    ? isSwarm
+      ? "Live swarm run — real web search and visible agent coordination"
+      : "Live run — web search executes against real sources"
+    : "End-user preview — add a web search tool for live data";
 
   return (
     <HudPanel
       tier={2}
       glow="violet"
+      live={hasLiveSearch}
       className="flex h-full min-h-0 flex-col overflow-hidden"
     >
-      {/* Fake device-chrome header */}
       <div className="shrink-0 border-b border-white/[0.05]">
         <div className="flex items-center gap-2 border-b border-white/[0.04] bg-black/20 px-4 py-2">
           <div className="flex gap-1.5">
@@ -98,7 +133,9 @@ export function PreviewPanel({ agentSpec }: PreviewPanelProps) {
           </div>
           <div className="ml-2 flex flex-1 items-center justify-center">
             <div className="flex items-center gap-1.5 rounded-md bg-white/[0.04] px-2.5 py-0.5 font-mono text-[10px] text-muted-foreground">
-              <span className="size-1 rounded-full bg-violet" />
+              <span
+                className={`size-1 rounded-full ${hasLiveSearch ? "bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.8)]" : "bg-violet"}`}
+              />
               swarm://preview/{agentSpec.name.toLowerCase().replace(/\s+/g, "-")}
             </div>
           </div>
@@ -125,9 +162,20 @@ export function PreviewPanel({ agentSpec }: PreviewPanelProps) {
                   <h2 className="text-[14px] font-semibold text-foreground">
                     {agentSpec.name}
                   </h2>
-                  <span className="rounded-full border border-violet/40 bg-violet/10 px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.14em] text-violet-200">
-                    Preview
+                  <span
+                    className={`rounded-full border px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.14em] ${
+                      hasLiveSearch
+                        ? "border-green-400/30 bg-green-400/10 text-green-200"
+                        : "border-violet/40 bg-violet/10 text-violet-200"
+                    }`}
+                  >
+                    {hasLiveSearch ? "Live" : "Preview"}
                   </span>
+                  {isSwarm && (
+                    <span className="rounded-full border border-violet/30 bg-violet/10 px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.14em] text-violet-200/90">
+                      Swarm
+                    </span>
+                  )}
                 </div>
                 <p className="mt-0.5 text-[12px] text-muted-foreground">
                   {agentSpec.persona.role}
@@ -149,8 +197,12 @@ export function PreviewPanel({ agentSpec }: PreviewPanelProps) {
           </div>
 
           <p className="relative mt-3 flex items-center gap-1.5 text-[11px] text-muted-foreground/85">
-            <Sparkles className="size-3 text-violet-300/80" />
-            Simulated end-user experience — not deployed yet
+            {hasLiveSearch ? (
+              <Zap className="size-3 text-green-300/90" />
+            ) : (
+              <Sparkles className="size-3 text-violet-300/80" />
+            )}
+            {statusLine}
           </p>
         </div>
       </div>
@@ -167,37 +219,74 @@ export function PreviewPanel({ agentSpec }: PreviewPanelProps) {
               </div>
               <div>
                 <p className="text-[14px] font-medium text-foreground">
-                  Try your agent before deploying
+                  {isReady
+                    ? "Run your agent with live tools"
+                    : "Finish building to preview"}
                 </p>
                 <p className="mt-1.5 text-[12px] leading-relaxed text-muted-foreground">
-                  Chat as an end user would. Responses use your persona and
-                  instructions — tools run in simulated mode.
+                  {isReady
+                    ? hasLiveSearch
+                      ? "Ask about current events — web search hits real sources and results appear inline."
+                      : "Chat as an end user would. Add a web search tool in the builder for live data."
+                    : "Complete persona and instructions in the builder before previewing."}
                 </p>
               </div>
 
-              <div className="space-y-1.5 text-left">
-                {DEFAULT_STARTERS.map((prompt) => (
-                  <button
-                    key={prompt}
-                    type="button"
-                    onClick={() => submitPrompt(prompt)}
-                    disabled={isBusy}
-                    className="lift w-full rounded-xl border border-white/[0.06] bg-white/[0.015] px-3.5 py-2.5 text-left text-[12.5px] leading-relaxed text-muted-foreground transition-all hover:border-violet/30 hover:bg-violet/[0.06] hover:text-foreground disabled:opacity-40"
-                  >
-                    {prompt}
-                  </button>
-                ))}
-              </div>
+              {isReady && (
+                <div className="space-y-1.5 text-left">
+                  {DEFAULT_STARTERS.map((prompt) => (
+                    <button
+                      key={prompt}
+                      type="button"
+                      onClick={() => submitPrompt(prompt)}
+                      disabled={isBusy}
+                      className="lift w-full rounded-xl border border-white/[0.06] bg-white/[0.015] px-3.5 py-2.5 text-left text-[12.5px] leading-relaxed text-muted-foreground transition-all hover:border-violet/30 hover:bg-violet/[0.06] hover:text-foreground disabled:opacity-40"
+                    >
+                      {prompt}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
-          {messages.map((message) => (
-            <ChatMessage
-              key={message.id}
-              message={message}
-              isStreaming={message.id === streamingAssistantId}
-            />
-          ))}
+          {messages.map((message, index) => {
+            const isLastAssistant =
+              message.role === "assistant" && index === messages.length - 1;
+            const showOrchestration =
+              isSwarm &&
+              isLastAssistant &&
+              orchestrationSteps.length > 0;
+
+            return (
+              <div key={message.id}>
+                {showOrchestration && (
+                  <SwarmOrchestrationTimeline
+                    steps={orchestrationSteps}
+                    isActive={isBusy}
+                  />
+                )}
+                <ChatMessage
+                  message={message}
+                  isStreaming={message.id === streamingAssistantId}
+                  assistantLabel={agentSpec.name}
+                  workingLabel={
+                    isSwarm && isBusy ? "Orchestrating" : "Responding"
+                  }
+                />
+              </div>
+            );
+          })}
+
+          {isBusy &&
+            messages.length > 0 &&
+            messages.at(-1)?.role === "user" &&
+            orchestrationSteps.length > 0 && (
+              <SwarmOrchestrationTimeline
+                steps={orchestrationSteps}
+                isActive
+              />
+            )}
 
           {error && <HudError message={error.message} />}
           <div ref={scrollAnchorRef} />
@@ -211,7 +300,11 @@ export function PreviewPanel({ agentSpec }: PreviewPanelProps) {
           onSubmit={() => submitPrompt(input)}
           onStop={stop}
           isBusy={isBusy}
-          placeholder={`Message ${agentSpec.name}…`}
+          placeholder={
+            isReady
+              ? `Message ${agentSpec.name}…`
+              : "Complete the agent build to preview…"
+          }
         />
       </div>
     </HudPanel>

@@ -2,6 +2,7 @@
 
 import { ChevronDown, Search, Sparkles } from "lucide-react";
 import { useState } from "react";
+import { WebSearchToolOutput } from "@/components/preview/web-search-display";
 import { PlanSteps } from "@/components/chat/plan-steps";
 import { TOOL_LABELS } from "@/lib/chat-types";
 import type { AgentPlan, PlanStepStatus } from "@/lib/chat-types";
@@ -113,6 +114,21 @@ export function ToolCallDisplay({
   if (toolName === "createPlan" && isDone && output && typeof output === "object") {
     const plan = output as AgentPlan;
     return <PlanSteps plan={plan} stepOverrides={stepOverrides} />;
+  }
+
+  if (toolName === "web_search") {
+    const queryHint =
+      input && typeof input === "object" && "query" in (input as object)
+        ? String((input as { query: string }).query)
+        : undefined;
+
+    return (
+      <WebSearchToolOutput
+        output={output}
+        isDone={isDone}
+        queryHint={queryHint}
+      />
+    );
   }
 
   if (toolName === "researchTopic" && isDone && output && typeof output === "object") {

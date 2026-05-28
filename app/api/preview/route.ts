@@ -1,15 +1,13 @@
 import {
-  convertToModelMessages,
   createUIMessageStream,
   createUIMessageStreamResponse,
-  streamText,
-  type UIMessage,
 } from "ai";
 import { agentSpecSchema, defaultAgentSpec } from "@/lib/agent-spec";
-import { buildAgentRuntimePrompt } from "@/lib/agent-prompt";
-import { deepseekChat } from "@/lib/deepseek";
+import { isWebSearchConfigured } from "@/lib/web-search";
+import type { PreviewUIMessage } from "@/lib/preview-types";
+import { runPreviewStream } from "@/lib/preview-runtime";
 
-export const maxDuration = 30;
+export const maxDuration = 120;
 
 export async function POST(req: Request) {
   try {
@@ -21,22 +19,12 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const messages: UIMessage[] = body.messages ?? [];
+    const messages: PreviewUIMessage[] = body.messages ?? [];
     const parsedSpec = agentSpecSchema.safeParse(body.agentSpec);
     const spec = parsedSpec.success ? parsedSpec.data : defaultAgentSpec;
 
-    const modelMessages = await convertToModelMessages(messages);
-
-    const stream = createUIMessageStream({
-      execute: ({ writer }) => {
-        const result = streamText({
-          model: deepseekChat,
-          system: buildAgentRuntimePrompt(spec),
-          messages: modelMessages,
-        });
-
-        writer.merge(result.toUIMessageStream());
-      },
+    const stream = createUIMessageStream<PreviewUIMessage>({
+      execute: ({ writer }) => runPreviewStream(spec, messages, writer),
       onError: (error) => {
         console.error("Preview stream error:", error);
         return error instanceof Error
@@ -45,7 +33,12 @@ export async function POST(req: Request) {
       },
     });
 
-    return createUIMessageStreamResponse({ stream });
+    const response = createUIMessageStreamResponse({ stream });
+    response.headers.set(
+      "X-Swarm-Live-Search",
+      isWebSearchConfigured() ? "enabled" : "disabled"
+    );
+    return response;
   } catch (error) {
     console.error("Preview route error:", error);
     return Response.json(

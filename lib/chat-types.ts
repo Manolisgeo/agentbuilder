@@ -42,6 +42,7 @@ export type SwarmUIMessage = UIMessage<
 
 export const TOOL_LABELS: Record<string, { active: string; done: string }> = {
   clarifyUser: { active: "Asking clarifying questions", done: "Questions sent" },
+  web_search: { active: "Searching the web", done: "Web search complete" },
   researchTopic: { active: "Researching", done: "Research complete" },
   createPlan: { active: "Creating plan", done: "Plan created" },
   updatePlanStep: { active: "Updating step", done: "Step updated" },

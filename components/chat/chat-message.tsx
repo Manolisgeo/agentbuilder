@@ -10,6 +10,8 @@ interface ChatMessageProps {
   message: UIMessage;
   isStreaming?: boolean;
   planStepOverrides?: Record<string, PlanStepStatus>;
+  assistantLabel?: string;
+  workingLabel?: string;
 }
 
 function formatText(text: string) {
@@ -53,6 +55,8 @@ export function ChatMessage({
   message,
   isStreaming,
   planStepOverrides,
+  assistantLabel = "Swarm",
+  workingLabel = "Working",
 }: ChatMessageProps) {
   const isUser = message.role === "user";
 
@@ -97,13 +101,13 @@ export function ChatMessage({
               isUser ? "text-muted-foreground/80" : "text-primary/85"
             )}
           >
-            {isUser ? "You" : "Swarm"}
+            {isUser ? "You" : assistantLabel}
           </span>
           {!isUser && isStreaming && (
             <span className="flex items-center gap-1">
               <span className="size-1 rounded-full bg-primary [animation:idle-pulse_1s_ease-in-out_infinite]" />
               <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-primary/70">
-                Working
+                {workingLabel}
               </span>
             </span>
           )}
