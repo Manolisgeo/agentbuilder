@@ -9,7 +9,12 @@ import {
 import {
   BookOpen,
   Bot,
+  Clock,
+  Cpu,
+  Database,
   Globe,
+  Package,
+  Send,
   Sparkles,
   Users,
   Wrench,
@@ -21,7 +26,12 @@ export type BoardNodeKind =
   | "instructions"
   | "tool"
   | "orchestrator"
-  | "swarm";
+  | "swarm"
+  | "trigger"
+  | "input"
+  | "processor"
+  | "output"
+  | "dependency";
 
 export type BoardNodeData = {
   label: string;
@@ -77,6 +87,41 @@ const NODE_THEMES: Record<
     glow: "rgba(245,158,11,0.35)",
     icon: Sparkles,
     tag: "Sub-agent",
+  },
+  trigger: {
+    accent: "#f59e0b",
+    accentRgba: "245,158,11",
+    glow: "rgba(245,158,11,0.35)",
+    icon: Clock,
+    tag: "Trigger",
+  },
+  input: {
+    accent: "#06b6d4",
+    accentRgba: "6,182,212",
+    glow: "rgba(6,182,212,0.35)",
+    icon: Database,
+    tag: "Input",
+  },
+  processor: {
+    accent: "#3b82f6",
+    accentRgba: "59,130,246",
+    glow: "rgba(59,130,246,0.35)",
+    icon: Cpu,
+    tag: "Processor",
+  },
+  output: {
+    accent: "#10b981",
+    accentRgba: "16,185,129",
+    glow: "rgba(16,185,129,0.35)",
+    icon: Send,
+    tag: "Output",
+  },
+  dependency: {
+    accent: "#8b5cf6",
+    accentRgba: "139,92,246",
+    glow: "rgba(139,92,246,0.35)",
+    icon: Package,
+    tag: "Dep",
   },
 };
 
@@ -215,7 +260,7 @@ export function BoardNode({ data }: NodeProps<Node<BoardNodeData>>) {
       </div>
 
       {/* Handles */}
-      {!isPlaceholder && data.kind !== "agent" && data.kind !== "orchestrator" && (
+      {!isPlaceholder && data.kind !== "agent" && data.kind !== "orchestrator" && data.kind !== "trigger" && (
         <Handle
           type="target"
           position={
@@ -242,7 +287,7 @@ export function BoardNode({ data }: NodeProps<Node<BoardNodeData>>) {
         />
       )}
 
-      {(data.kind === "agent" || data.kind === "orchestrator") && !isPlaceholder ? (
+      {(data.kind === "agent" || data.kind === "orchestrator" || data.kind === "trigger") && !isPlaceholder ? (
         <Handle
           type="source"
           position={Position.Bottom}

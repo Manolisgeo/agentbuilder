@@ -1,5 +1,6 @@
 import type { UIMessage } from "ai";
 import type { AgentSpec } from "./agent-spec";
+import type { CodeSpec } from "./codegen-types";
 
 export type PlanStepStatus = "pending" | "in_progress" | "completed";
 
@@ -51,3 +52,8 @@ export const TOOL_LABELS: Record<string, { active: string; done: string }> = {
   removeSubAgent: { active: "Removing sub-agent", done: "Sub-agent removed" },
   updateAgentSpec: { active: "Updating agent spec", done: "Spec updated" },
 };
+
+export type CodegenUIMessage = UIMessage<
+  never,
+  { codeSpec: CodeSpec }
+>;
