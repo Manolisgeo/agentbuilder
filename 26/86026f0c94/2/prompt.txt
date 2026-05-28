@@ -1,0 +1,35 @@
+change the deployment keys anf infromatin to be hardcoded in the env instead of asked for here DEPLOY · LOCAL DOCKER
+Generate a runnable agent and launch it in a container.
+
+HTTP_REQUEST
+
+---
+
+change the deployment keys anf infromatin to be hardcoded in the env instead of asked for here DEPLOY · LOCAL DOCKER
+Generate a runnable agent and launch it in a container.
+
+HTTP_REQUEST
+
+---
+
+where do i find the URL stuff that I need
+
+---
+
+where do i find the URL stuff that I need
+
+---
+
+what was the old form view for though, i dont really understand. If these are user dependent, then the agent should be able to ask for it when necessary and add it securely into the env. explain to me
+
+---
+
+but this is way too complex for a non technical user to understand. The agent should configure it himself. make sure tha works
+
+---
+
+fetch and pull my collaborators change and rebase
+
+---
+
+fetch and pull my collaborators change and rebase
