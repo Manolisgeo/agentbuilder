@@ -1,0 +1,72 @@
+{
+  "cli_version": "0.6.3",
+  "checkpoint_id": "2d8628ba90af",
+  "session_id": "92639c00-04d5-4ae3-a621-4df4c4fa9a73",
+  "strategy": "manual-commit",
+  "created_at": "2026-05-28T12:48:54.332282Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "app/api/chat/route.ts",
+    "components/actions-panel.tsx",
+    "components/chat/chat-message.tsx",
+    "components/chat/tool-call-display.tsx",
+    "components/hud/segmented-progress.tsx",
+    "components/preview/articles-feed.tsx",
+    "components/preview/preview-panel.tsx",
+    "docs/plans/professional-ui-polish.md",
+    "lib/agent-prompt.ts",
+    "lib/build-progress.ts",
+    "lib/preview-runtime.ts",
+    "lib/preview-types.ts",
+    "package-lock.json",
+    "package.json"
+  ],
+  "agent": "Cursor",
+  "model": "claude-sonnet-4-6",
+  "turn_id": "1f13e0f31788",
+  "session_metrics": {
+    "duration_ms": 1361792,
+    "turn_count": 1
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-05-28T12:48:54.329705Z",
+    "agent_lines": 2123,
+    "agent_removed": 155,
+    "human_added": 0,
+    "human_modified": 22,
+    "human_removed": 2,
+    "total_committed": 2145,
+    "total_lines_changed": 2338,
+    "agent_percentage": 97.43370402053037,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 632,
+      "user_lines_removed": 24,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        "app/api/chat/route.ts": 5,
+        "components/chat/chat-message.tsx": 24,
+        "components/chat/tool-call-display.tsx": 147,
+        "components/preview/dashboard-card.tsx": 60,
+        "components/preview/preview-panel.tsx": 22,
+        "docs/plans/html-dashboard-preview.md": 282,
+        "lib/agent-prompt.ts": 33,
+        "lib/preview-runtime.ts": 52,
+        "lib/preview-types.ts": 7
+      },
+      "user_removed_per_file": {
+        "app/api/chat/route.ts": 4,
+        "components/chat/chat-message.tsx": 6,
+        "components/chat/tool-call-display.tsx": 1,
+        "components/preview/preview-panel.tsx": 3,
+        "lib/agent-prompt.ts": 1,
+        "lib/preview-runtime.ts": 9
+      }
+    }
+  ]
+}
