@@ -292,6 +292,38 @@ export function buildVoiceDeployRuntimeScript(): string {
   var recorder = null;
   var chunks = [];
 
+  // Track the single live audio element + the URL we created for it so we
+  // can fully tear it down before starting another playback. A generation
+  // counter discards any TTS/chat response that finishes after a newer turn
+  // has already started — that's what was causing overlapping voices.
+  var currentAudio = null;
+  var currentAudioUrl = null;
+  var turnGen = 0;
+  var ttsAbort = null;
+
+  function stopCurrentAudio() {
+    if (currentAudio) {
+      try {
+        currentAudio.pause();
+        currentAudio.onended = null;
+        currentAudio.onerror = null;
+        currentAudio.src = "";
+      } catch (e) {}
+      currentAudio = null;
+    }
+    if (currentAudioUrl) {
+      try { URL.revokeObjectURL(currentAudioUrl); } catch (e) {}
+      currentAudioUrl = null;
+    }
+  }
+
+  function abortInFlightTts() {
+    if (ttsAbort) {
+      try { ttsAbort.abort(); } catch (e) {}
+      ttsAbort = null;
+    }
+  }
+
   function setStatus(text) {
     if (statusEl) statusEl.textContent = text;
   }
@@ -306,6 +338,14 @@ export function buildVoiceDeployRuntimeScript(): string {
   }
 
   async function send(text) {
+    // New turn — cancel any in-flight TTS fetch and any audio still playing
+    // from the previous turn, then bump the generation so late responses are
+    // ignored.
+    turnGen++;
+    var myGen = turnGen;
+    stopCurrentAudio();
+    abortInFlightTts();
+
     messages.push({ role: "user", content: text });
     appendTranscript("user", text);
     setStatus("Thinking…");
@@ -328,13 +368,16 @@ export function buildVoiceDeployRuntimeScript(): string {
     } catch (e) {
       acc = "[connection error]";
     }
+    // Bail if a newer turn started while we were waiting for the chat reply.
+    if (myGen !== turnGen) return;
+
     if (!acc) acc = "[no response]";
     messages.push({ role: "assistant", content: acc });
     appendTranscript("assistant", acc);
     sendBtn.disabled = false;
     callBtn.disabled = false;
     setStatus("Ready to talk");
-    if (acc && speak) speak(acc);
+    if (acc && speak) speak(acc, myGen);
   }
 
   (async function () {
@@ -348,21 +391,38 @@ export function buildVoiceDeployRuntimeScript(): string {
       return;
     }
 
-    speak = async function (text) {
+    speak = async function (text, myGen) {
       if (!speakerOn) return;
+      // Always cancel previous playback + in-flight TTS request first.
+      stopCurrentAudio();
+      abortInFlightTts();
+      ttsAbort = typeof AbortController === "function" ? new AbortController() : null;
+      var signal = ttsAbort ? ttsAbort.signal : undefined;
       try {
         setStatus("Speaking…");
         var r = await fetch("/api/tts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text: text }),
+          signal: signal,
         });
+        if (myGen !== turnGen) return; // newer turn started — drop this audio
         if (!r.ok) { setStatus("Ready to talk"); return; }
         var blob = await r.blob();
-        var audio = new Audio(URL.createObjectURL(blob));
-        audio.onended = function () { setStatus("Ready to talk"); };
-        await audio.play();
+        if (myGen !== turnGen) return;
+        currentAudioUrl = URL.createObjectURL(blob);
+        currentAudio = new Audio(currentAudioUrl);
+        currentAudio.onended = function () {
+          stopCurrentAudio();
+          setStatus("Ready to talk");
+        };
+        currentAudio.onerror = function () {
+          stopCurrentAudio();
+          setStatus("Ready to talk");
+        };
+        await currentAudio.play();
       } catch (e) {
+        stopCurrentAudio();
         setStatus("Ready to talk");
       }
     };
@@ -370,6 +430,9 @@ export function buildVoiceDeployRuntimeScript(): string {
     callBtn.addEventListener("click", async function () {
       if (sendBtn.disabled) return;
       if (recorder && recorder.state === "recording") { recorder.stop(); return; }
+      // Tapping the mic mid-playback should immediately silence the agent.
+      stopCurrentAudio();
+      abortInFlightTts();
       try {
         setStatus("Listening…");
         var stream = await navigator.mediaDevices.getUserMedia({ audio: true });

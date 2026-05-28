@@ -1,12 +1,14 @@
 import type { AgentSpec } from "@/lib/agent-spec";
-import {
-  DEFAULT_STT_MODEL,
-  DEFAULT_TTS_MODEL,
-  type VoiceInput,
-} from "@/lib/connectors";
+import { type VoiceInput } from "@/lib/connectors";
+import { normalizeSttModel, normalizeTtsModel } from "@/lib/voice-models";
 
-/** Fallback when account voices cannot be fetched at build time. */
-export const DEFAULT_VOICE_ID = "21m00Tcm4TlvDq8ikWAM";
+/**
+ * Fallback when account voices cannot be fetched at build time.
+ * "Sarah" — a `premade` voice available to all accounts (free tier included).
+ * Avoid `professional`/library preset IDs here: those require a paid plan and
+ * the API rejects them with 402.
+ */
+export const DEFAULT_VOICE_ID = "EXAVITQu4vr4xnSDxMaL";
 
 const VOICE_INTENT_RE =
   /\b(voice[\s-]?agent|call[\s-]?agent|phone[\s-]?agent|voice[\s-]?bot|voice[\s-]?assistant|phone[\s-]?bot|spoken|speak(?:ing)?|talk(?:ing)?|verbal|microphone|\bmic\b|speech[\s-]?(?:to[\s-]?text|input|output)|text[\s-]?to[\s-]?speech|\btts\b|\bstt\b|eleven[\s-]?labs|voice[\s-]?call|call[\s-]?center|ivr)\b/i;
@@ -39,8 +41,8 @@ export function resolveVoiceConfig(spec: AgentSpec): VoiceInput | undefined {
   return {
     enabled: true,
     voiceId: resolveVoiceId(spec),
-    ttsModel: spec.voice?.ttsModel ?? DEFAULT_TTS_MODEL,
-    sttModel: spec.voice?.sttModel ?? DEFAULT_STT_MODEL,
+    ttsModel: normalizeTtsModel(spec.voice?.ttsModel),
+    sttModel: normalizeSttModel(spec.voice?.sttModel),
   };
 }
 

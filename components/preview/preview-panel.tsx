@@ -33,6 +33,7 @@ import {
 import { transcribePreviewAudio } from "@/lib/voice-client";
 import {
   arrayBufferToBase64,
+  cancelInFlightTts,
   fetchPreviewTtsAudio,
   resetSpokenTexts,
   shouldSpeakText,
@@ -69,6 +70,10 @@ export function PreviewPanel({
   const mimeTypeRef = useRef("audio/webm");
   const previewSendLockRef = useRef(false);
   const assistantPostRef = useRef("");
+  // Bumped every time a new user turn starts. A TTS fetch that returns after
+  // a newer turn began checks this and silently drops its audio instead of
+  // playing it over the new response.
+  const ttsTurnRef = useRef(0);
   agentSpecRef.current = agentSpec;
   onMemoryUpdateRef.current = onMemoryUpdate;
 
@@ -94,6 +99,11 @@ export function PreviewPanel({
   const pendingStreamRef = useRef<{ text: string; done: boolean } | null>(null);
 
   const cancelVoiceTts = useCallback(() => {
+    // Bump the turn so any TTS response that finishes after this call is
+    // discarded by the speaking effect, abort the parent fetch, and tell the
+    // iframe to silence whatever it's currently playing.
+    ttsTurnRef.current += 1;
+    cancelInFlightTts();
     postToFrame({ type: "agent-preview-tts-cancel" });
   }, [postToFrame]);
 
@@ -333,16 +343,21 @@ export function PreviewPanel({
     const text = getAssistantText(lastMessage).trim();
     if (!shouldSpeakText(text)) return;
 
+    // Snapshot the turn so a late response from an older turn knows to bail.
+    const turn = ttsTurnRef.current;
     postToFrame({ type: "agent-preview-tts-pending" });
 
     void (async () => {
       try {
         const buffer = await fetchPreviewTtsAudio(text, agentSpecRef.current);
+        if (turn !== ttsTurnRef.current) return; // newer turn — drop audio
         postToFrame({
           type: "agent-preview-tts-audio",
           audio: arrayBufferToBase64(buffer),
         });
       } catch (err) {
+        if (turn !== ttsTurnRef.current) return;
+        if (err instanceof DOMException && err.name === "AbortError") return;
         postToFrame({
           type: "agent-preview-tts-error",
           message:

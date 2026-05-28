@@ -114,9 +114,6 @@ export interface RuntimeInputs {
   voice?: VoiceInput;
 }
 
-export const DEFAULT_TTS_MODEL = "eleven_turbo_v2_5";
-export const DEFAULT_STT_MODEL = "scribe_v2";
-
 export const NEED_LABELS: Record<RuntimeNeed, string> = {
   path: "Folder path (on this machine)",
   glob: "File pattern (optional)",

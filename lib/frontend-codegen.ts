@@ -1,8 +1,5 @@
 import type { AgentSpec } from "@/lib/agent-spec";
-import {
-  buildVoiceFrontendHtml,
-  shouldRefreshVoiceHtml,
-} from "@/lib/voice-frontend-template";
+import { buildVoiceFrontendHtml } from "@/lib/voice-frontend-template";
 import { inferVoiceFromSpec } from "@/lib/voice";
 
 /** Utilities for working with LLM-generated frontend HTML stored on the spec. */
@@ -30,10 +27,13 @@ export function extractHtmlFromLlmOutput(text: string): string | null {
 }
 
 export function getAgentFrontendHtml(spec: AgentSpec): string | null {
-  const saved = spec.deployment?.files.find((f) => f.path === "index.html")?.content;
-  if (inferVoiceFromSpec(spec) && shouldRefreshVoiceHtml(spec)) {
+  // Voice agents always use the prebuilt template — never trust LLM-stored
+  // HTML to render the call UI correctly. This guarantees the mic button,
+  // status line, and transcript always work after deploy.
+  if (inferVoiceFromSpec(spec)) {
     return buildVoiceFrontendHtml(spec);
   }
+  const saved = spec.deployment?.files.find((f) => f.path === "index.html")?.content;
   if (saved?.trim()) return saved;
   return null;
 }

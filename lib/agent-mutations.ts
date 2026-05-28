@@ -14,11 +14,7 @@ import {
   type DeploymentPlatform,
 } from "@/lib/agent-ui";
 import { generateDeploymentFiles } from "@/lib/deployment-templates";
-import {
-  buildVoiceFrontendHtml,
-  hasVoiceFrontendHtml,
-  shouldRefreshVoiceHtml,
-} from "@/lib/voice-frontend-template";
+import { buildVoiceFrontendHtml } from "@/lib/voice-frontend-template";
 
 export function updatePersona(
   spec: AgentSpec,
@@ -126,6 +122,8 @@ export function enableVoice(
   options?: { voiceId?: string; ttsModel?: string; sttModel?: string }
 ): AgentSpec {
   const currentUi = spec.ui ?? defaultAgentUi;
+  // agentVoiceSchema .transform() normalizes all four fields — bad voice IDs
+  // drop to undefined, hallucinated model names get whitelisted away.
   const withVoice = agentSpecSchema.parse({
     ...spec,
     voice: {
@@ -144,10 +142,9 @@ export function enableVoice(
     },
   });
 
-  if (hasVoiceFrontendHtml(withVoice) && !shouldRefreshVoiceHtml(withVoice)) {
-    return withVoice;
-  }
-
+  // Always rewrite the stored HTML to the prebuilt template so the design
+  // preview and the deployed UI stay in lockstep — voice agents must never
+  // ship with LLM-customized HTML that's missing the runtime contract.
   const otherFiles =
     withVoice.deployment?.files.filter((f) => f.path !== "index.html") ?? [];
   return updateDeploymentFiles(

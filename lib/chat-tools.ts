@@ -514,25 +514,18 @@ function buildingTools(
     },
     enableVoice: {
       description:
-        "Enable ElevenLabs voice for this agent. Sets UI template to \"voice\" and auto-generates the voice call UI (index.html) with required IDs. Call when the user asks for a voice agent. Must be called BEFORE optional updateDeploymentCode styling tweaks.",
-      inputSchema: z.object({
-        voiceId: z
-          .string()
-          .optional()
-          .describe("Optional ElevenLabs voice ID from YOUR account — do not use library preset IDs"),
-        ttsModel: z.string().optional(),
-        sttModel: z.string().optional(),
-      }),
-      execute: async (options: {
-        voiceId?: string;
-        ttsModel?: string;
-        sttModel?: string;
-      }) =>
+        "Enable ElevenLabs voice for this agent. Sets UI template to \"voice\" and auto-generates the voice call UI (index.html) with required IDs. Call when the user asks for a voice agent. Must be called BEFORE optional updateDeploymentCode styling tweaks. Do NOT pass voice/model parameters — the server resolves them safely.",
+      // Intentionally no inputs: the LLM was hallucinating invalid STT model
+      // IDs (e.g. "eleven_labs") and picking paid-tier library voices that
+      // free accounts can't use. Voice + model selection is handled
+      // server-side in resolveElevenLabsVoiceId / voice-models whitelist.
+      inputSchema: z.object({}),
+      execute: async () =>
         runSpecMutation(
           writer,
           getSpec,
           setSpec,
-          (spec) => enableVoice(spec, options),
+          (spec) => enableVoice(spec),
           { voice: true }
         ),
     },

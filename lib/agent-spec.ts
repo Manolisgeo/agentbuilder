@@ -7,6 +7,7 @@ import {
   type AgentDeployment,
   type AgentUi,
 } from "@/lib/agent-ui";
+import { normalizeSttModel, normalizeTtsModel } from "@/lib/voice-models";
 
 export const TOOL_TYPES = [
   "web_search",
@@ -56,12 +57,38 @@ export const swarmAgentSchema = z.object({
     .optional(),
 });
 
-export const agentVoiceSchema = z.object({
+// ElevenLabs voice IDs are 20-character alphanumeric strings. Anything else
+// (LLM hallucinations, free text, paid-tier preset IDs the free plan can't
+// access) is dropped so the server-side resolver picks a working voice from
+// the user's account.
+const ELEVENLABS_VOICE_ID_RE = /^[A-Za-z0-9]{20}$/;
+
+// Inner object kept exported for partial-schema reuse (patch schema). Use
+// agentVoiceSchema externally — it applies the normalization transform.
+export const agentVoiceShape = z.object({
   enabled: z.boolean().default(true),
   voiceId: z.string().optional(),
   ttsModel: z.string().optional(),
   sttModel: z.string().optional(),
 });
+
+export const agentVoiceSchema = agentVoiceShape.transform(
+  (voice): {
+    enabled: boolean;
+    voiceId: string | undefined;
+    ttsModel: string;
+    sttModel: string;
+  } => ({
+    enabled: voice.enabled,
+    voiceId:
+      typeof voice.voiceId === "string" &&
+      ELEVENLABS_VOICE_ID_RE.test(voice.voiceId.trim())
+        ? voice.voiceId.trim()
+        : undefined,
+    ttsModel: normalizeTtsModel(voice.ttsModel),
+    sttModel: normalizeSttModel(voice.sttModel),
+  })
+);
 
 export const agentSpecSchema = z.object({
   name: z.string(),
@@ -96,7 +123,7 @@ export const agentSpecPatchSchema = agentSpecSchema.partial().extend({
     .optional(),
   swarmMemory: z.array(swarmMemoryKeySchema).optional(),
   envVars: z.record(z.string(), z.string()).optional(),
-  voice: agentVoiceSchema.partial().optional(),
+  voice: agentVoiceShape.partial().optional(),
   ui: agentUiSchema.partial().extend({
     theme: agentUiSchema.shape.theme.partial().optional(),
   }).optional(),
@@ -310,26 +337,7 @@ export function normalizeAgentSpec(
         ? { envVars: fallback.envVars }
         : {}),
     ...(typeof raw.voice === "object" && raw.voice !== null
-      ? {
-          voice: {
-            enabled:
-              typeof (raw.voice as Record<string, unknown>).enabled === "boolean"
-                ? (raw.voice as { enabled: boolean }).enabled
-                : fallback.voice?.enabled,
-            voiceId:
-              typeof (raw.voice as Record<string, unknown>).voiceId === "string"
-                ? (raw.voice as { voiceId: string }).voiceId
-                : fallback.voice?.voiceId,
-            ttsModel:
-              typeof (raw.voice as Record<string, unknown>).ttsModel === "string"
-                ? (raw.voice as { ttsModel: string }).ttsModel
-                : fallback.voice?.ttsModel,
-            sttModel:
-              typeof (raw.voice as Record<string, unknown>).sttModel === "string"
-                ? (raw.voice as { sttModel: string }).sttModel
-                : fallback.voice?.sttModel,
-          },
-        }
+      ? { voice: raw.voice }
       : fallback.voice
         ? { voice: fallback.voice }
         : {}),
@@ -387,13 +395,15 @@ export function mergeAgentSpec(
 
   const currentVoice = current.voice;
   const patchVoice = patch.voice;
+  // Re-parse through the schema so normalize transform applies again — any
+  // bad model name in the patch gets whitelisted away before merging.
   const mergedVoice = patchVoice
-    ? {
+    ? agentVoiceSchema.parse({
         enabled: patchVoice.enabled ?? currentVoice?.enabled ?? true,
         voiceId: patchVoice.voiceId ?? currentVoice?.voiceId,
         ttsModel: patchVoice.ttsModel ?? currentVoice?.ttsModel,
         sttModel: patchVoice.sttModel ?? currentVoice?.sttModel,
-      }
+      })
     : currentVoice;
 
   const merged: AgentSpec = {
