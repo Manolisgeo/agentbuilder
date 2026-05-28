@@ -2,18 +2,22 @@
 
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { Loader2, Send } from "lucide-react";
+import { Hammer } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { ChatComposer } from "@/components/chat/chat-composer";
+import { ChatMessage } from "@/components/chat/chat-message";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Textarea } from "@/components/ui/textarea";
 import { HudError } from "@/components/hud/hud-error";
 import { HudPanel } from "@/components/hud/hud-panel";
 import type { AgentSpec } from "@/lib/agent-spec";
+import type { BuildPhase } from "@/lib/build-phase";
 import type { SwarmUIMessage } from "@/lib/chat-types";
 
 interface ChatPanelProps {
   agentSpec: AgentSpec;
+  buildPhase: BuildPhase;
+  onBuildPhaseChange: (phase: BuildPhase) => void;
   onSpecUpdate: (spec: AgentSpec) => void;
   onError: (message: string) => void;
   onBuildingChange?: (building: boolean) => void;
@@ -25,17 +29,29 @@ const STARTER_PROMPTS = [
   "I need an agent that monitors news and sends concise daily briefings.",
 ];
 
+function looksLikeBuildIntent(text: string): boolean {
+  return /\b(build it|start building|go ahead|let'?s build|ready to build|assemble the agent|begin building)\b/i.test(
+    text
+  );
+}
+
 export function ChatPanel({
   agentSpec,
+  buildPhase,
+  onBuildPhaseChange,
   onSpecUpdate,
   onError,
   onBuildingChange,
 }: ChatPanelProps) {
   const [input, setInput] = useState("");
   const agentSpecRef = useRef(agentSpec);
-  agentSpecRef.current = agentSpec;
+  const buildPhaseRef = useRef(buildPhase);
+  const scrollAnchorRef = useRef<HTMLDivElement>(null);
 
-  const { messages, sendMessage, status, error } = useChat<SwarmUIMessage>({
+  agentSpecRef.current = agentSpec;
+  buildPhaseRef.current = buildPhase;
+
+  const { messages, sendMessage, status, error, stop } = useChat<SwarmUIMessage>({
     transport: new DefaultChatTransport({
       api: "/api/chat",
       prepareSendMessagesRequest: ({ messages, id }) => ({
@@ -43,11 +59,15 @@ export function ChatPanel({
           messages,
           id,
           agentSpec: agentSpecRef.current,
+          buildPhase: buildPhaseRef.current,
         },
       }),
     }),
     onData: (dataPart) => {
-      if (dataPart.type === "data-agentSpec") {
+      if (
+        dataPart.type === "data-agentSpec" &&
+        buildPhaseRef.current === "building"
+      ) {
         onSpecUpdate(dataPart.data);
       }
     },
@@ -57,33 +77,74 @@ export function ChatPanel({
   });
 
   const isBusy = status === "submitted" || status === "streaming";
+  const isDiscovery = buildPhase === "discovery";
+  const lastMessage = messages.at(-1);
+  const streamingAssistantId =
+    isBusy && lastMessage?.role === "assistant" ? lastMessage.id : null;
 
   useEffect(() => {
-    onBuildingChange?.(isBusy);
-  }, [isBusy, onBuildingChange]);
+    onBuildingChange?.(isBusy && buildPhaseRef.current === "building");
+  }, [isBusy, buildPhase, onBuildingChange]);
+
+  useEffect(() => {
+    scrollAnchorRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, isBusy]);
 
   function submitPrompt(text: string) {
     const trimmed = text.trim();
     if (!trimmed || isBusy) return;
+
+    if (
+      buildPhaseRef.current === "discovery" &&
+      looksLikeBuildIntent(trimmed)
+    ) {
+      onBuildPhaseChange("building");
+      buildPhaseRef.current = "building";
+    }
+
     sendMessage({ text: trimmed });
     setInput("");
   }
 
+  function startBuilding() {
+    if (isBusy) return;
+    onBuildPhaseChange("building");
+    buildPhaseRef.current = "building";
+    sendMessage({
+      text: "I'm ready — please build the agent based on our conversation.",
+    });
+  }
+
   return (
     <HudPanel tier={1} className="flex h-full min-h-[420px] flex-col">
-      <div className="border-b border-white/[0.06] px-4 py-3">
-        <p className="hud-label">Input channel</p>
-        <h2 className="mt-0.5 text-sm font-medium">Agent builder</h2>
+      <div className="flex items-start justify-between gap-3 border-b border-white/[0.06] px-4 py-3">
+        <div>
+          <p className="hud-label">Input channel</p>
+          <h2 className="mt-0.5 text-sm font-medium">Agent builder</h2>
+        </div>
+        {isDiscovery ? (
+          <span className="rounded-md border border-system/25 bg-system/[0.06] px-2 py-1 font-mono text-[9px] uppercase tracking-[0.14em] text-system">
+            Discovery
+          </span>
+        ) : (
+          <span className="rounded-md border border-primary/25 bg-primary/[0.06] px-2 py-1 font-mono text-[9px] uppercase tracking-[0.14em] text-primary">
+            Building
+          </span>
+        )}
       </div>
 
       <ScrollArea className="flex-1 px-3">
-        <div className="space-y-3 py-4">
+        <div className="space-y-4 py-4">
           {messages.length === 0 && (
             <div className="space-y-3">
-              <div className="rounded-lg border border-white/[0.06] bg-surface-2/50 px-3 py-3">
-                <p className="text-xs leading-relaxed text-muted-foreground">
-                  Describe what your agent should do. One clarifying question
-                  max — then live assembly begins.
+              <div className="rounded-xl border border-white/[0.06] bg-surface-2/40 px-4 py-4">
+                <p className="text-sm font-medium text-foreground">
+                  Let&apos;s design your agent together
+                </p>
+                <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                  I&apos;ll ask a few questions about purpose, tone, and
+                  capabilities before assembling anything. When we&apos;re aligned,
+                  hit <span className="text-foreground/80">Start building</span>.
                 </p>
               </div>
 
@@ -95,7 +156,7 @@ export function ChatPanel({
                     type="button"
                     onClick={() => submitPrompt(prompt)}
                     disabled={isBusy}
-                    className="w-full rounded-lg border border-white/[0.06] bg-surface-1 px-3 py-2 text-left text-xs leading-relaxed text-muted-foreground transition-all duration-200 hover:border-primary/25 hover:text-foreground disabled:opacity-40"
+                    className="w-full rounded-lg border border-white/[0.06] bg-surface-1 px-3 py-2.5 text-left text-xs leading-relaxed text-muted-foreground transition-all duration-200 hover:border-primary/25 hover:bg-surface-2/50 hover:text-foreground disabled:opacity-40"
                   >
                     {prompt}
                   </button>
@@ -105,83 +166,45 @@ export function ChatPanel({
           )}
 
           {messages.map((message) => (
-            <div
+            <ChatMessage
               key={message.id}
-              className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
-            >
-              <div
-                className={`max-w-[92%] rounded-lg px-3 py-2 text-sm leading-relaxed ${
-                  message.role === "user"
-                    ? "border border-white/[0.08] bg-surface-3 text-foreground"
-                    : "border border-white/[0.06] bg-surface-2 text-foreground/90"
-                }`}
-              >
-                {message.parts.map((part, index) => {
-                  if (part.type === "text") {
-                    return <p key={index}>{part.text}</p>;
-                  }
-                  if (part.type.startsWith("tool-")) {
-                    return (
-                      <p
-                        key={index}
-                        className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider text-system"
-                      >
-                        <span className="size-1 rounded-full bg-system idle-pulse" />
-                        Updating spec
-                      </p>
-                    );
-                  }
-                  return null;
-                })}
-              </div>
-            </div>
+              message={message}
+              isStreaming={message.id === streamingAssistantId}
+            />
           ))}
 
-          {isBusy && (
-            <div className="flex items-center gap-2 rounded-lg border border-system/20 bg-system/[0.04] px-3 py-2">
-              <Loader2 className="size-3 animate-spin text-system" />
-              <span className="font-mono text-[10px] uppercase tracking-wider text-system">
-                Processing
-              </span>
-            </div>
-          )}
-
           {error && <HudError message={error.message} />}
+          <div ref={scrollAnchorRef} />
         </div>
       </ScrollArea>
 
-      <form
-        className="border-t border-white/[0.06] p-3"
-        onSubmit={(event) => {
-          event.preventDefault();
-          submitPrompt(input);
-        }}
-      >
-        <div className="relative">
-          <Textarea
-            value={input}
-            onChange={(event) => setInput(event.target.value)}
-            placeholder="Describe your agent…"
-            rows={2}
-            disabled={isBusy}
-            className="min-h-[68px] resize-none border-white/[0.06] bg-surface-1 pr-11 text-sm focus-visible:border-primary/40 focus-visible:ring-primary/15"
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && !event.shiftKey) {
-                event.preventDefault();
-                event.currentTarget.form?.requestSubmit();
-              }
-            }}
-          />
+      {isDiscovery && messages.length > 0 && !isBusy && (
+        <div className="border-t border-white/[0.06] px-3 py-2.5">
           <Button
-            type="submit"
-            size="icon"
-            disabled={isBusy || !input.trim()}
-            className="absolute bottom-2 right-2 size-8 bg-primary text-primary-foreground hover:bg-primary/90"
+            type="button"
+            onClick={startBuilding}
+            className="h-8 w-full gap-2 bg-primary/90 text-primary-foreground hover:bg-primary"
           >
-            <Send className="size-3.5" />
+            <Hammer className="size-3.5" aria-hidden />
+            Start building
           </Button>
         </div>
-      </form>
+      )}
+
+      <div className="border-t border-white/[0.06]">
+        <ChatComposer
+          value={input}
+          onChange={setInput}
+          onSubmit={() => submitPrompt(input)}
+          onStop={stop}
+          isBusy={isBusy}
+          placeholder={
+            isDiscovery
+              ? "Describe your agent or answer a question…"
+              : "Refine the agent spec…"
+          }
+        />
+      </div>
     </HudPanel>
   );
 }

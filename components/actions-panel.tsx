@@ -1,12 +1,13 @@
 "use client";
 
-import { Download, Loader2 } from "lucide-react";
+import { Download, Loader2, Play } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { HudError } from "@/components/hud/hud-error";
 import { HudPanel } from "@/components/hud/hud-panel";
 import { SegmentedProgress } from "@/components/hud/segmented-progress";
 import { downloadAgentBundle } from "@/lib/export";
+import { isAgentPreviewReady } from "@/lib/agent-prompt";
 import { isAgentSpecEmpty, type AgentSpec } from "@/lib/agent-spec";
 
 interface ActionsPanelProps {
@@ -16,6 +17,7 @@ interface ActionsPanelProps {
   buildProgress?: number;
   statusLabel?: string;
   isBuilding?: boolean;
+  onPreview?: () => void;
 }
 
 function SpecField({ label, value }: { label: string; value: string }) {
@@ -39,10 +41,12 @@ export function ActionsPanel({
   buildProgress = 0,
   statusLabel = "AWAITING INPUT",
   isBuilding = false,
+  onPreview,
 }: ActionsPanelProps) {
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const canExport = !isAgentSpecEmpty(agentSpec);
+  const canPreview = isAgentPreviewReady(agentSpec);
 
   async function handleExport() {
     setIsExporting(true);
@@ -95,6 +99,26 @@ export function ActionsPanel({
             />
             <SpecField label="Instructions" value={agentSpec.instructions} />
           </div>
+        </div>
+
+        <div className="rounded-lg border border-white/[0.06] bg-surface-2/50 p-3">
+          <p className="hud-label mb-1">Pre-deploy preview</p>
+          <p className="mb-3 text-xs text-muted-foreground">
+            Test your agent as an end user before exporting
+          </p>
+          <Button
+            className="w-full gap-2 bg-violet-600 text-white hover:bg-violet-500"
+            onClick={onPreview}
+            disabled={!canPreview || isBuilding}
+          >
+            <Play className="size-4" />
+            Open preview
+          </Button>
+          {!canPreview && (
+            <p className="mt-2 text-center font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
+              Needs name, role & instructions
+            </p>
+          )}
         </div>
 
         <div className="rounded-lg border border-white/[0.06] bg-surface-2/50 p-3">

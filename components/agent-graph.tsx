@@ -4,21 +4,18 @@ import {
   Background,
   BackgroundVariant,
   Controls,
-  Handle,
   MarkerType,
-  Position,
   ReactFlow,
+  ReactFlowProvider,
+  useReactFlow,
   type Edge,
   type Node,
-  type NodeProps,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { BookOpen, Bot, Radio, Search, Users } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { BuildStepper } from "@/components/hud/build-stepper";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { BoardNode, type BoardNodeData } from "@/components/board/board-node";
+import { BoardToolbar } from "@/components/board/board-toolbar";
 import { HudPanel } from "@/components/hud/hud-panel";
-import { IdleReticle } from "@/components/hud/idle-reticle";
-import { getBuildStages } from "@/lib/build-progress";
 import {
   agentSpecSchema,
   defaultAgentSpec,
@@ -30,87 +27,78 @@ interface AgentGraphProps {
   spec: AgentSpec;
   isBuilding?: boolean;
   buildProgress?: number;
-}
-
-type CustomNodeData = {
-  label: string;
-  subtitle?: string;
-  detail?: string;
-  icon: "persona" | "instructions" | "tool" | "orchestrator" | "swarm";
-  isNew?: boolean;
-  animDelay?: number;
-};
-
-function GraphNode({ data }: NodeProps<Node<CustomNodeData>>) {
-  const icons = {
-    persona: Bot,
-    instructions: BookOpen,
-    tool: Search,
-    orchestrator: Users,
-    swarm: Users,
-  };
-  const Icon = icons[data.icon];
-
-  return (
-    <div
-      className={`group relative min-w-[200px] max-w-[260px] overflow-hidden rounded-lg border border-white/[0.08] bg-surface-3 px-4 py-3 shadow-hud-sm ${
-        data.isNew
-          ? "agent-node-spawn agent-node-glow cyan-scan-flash border-primary/30"
-          : ""
-      }`}
-      style={
-        data.isNew && data.animDelay !== undefined
-          ? { animationDelay: `${data.animDelay}ms` }
-          : undefined
-      }
-    >
-      {data.icon !== "orchestrator" && (
-        <Handle
-          type="target"
-          position={Position.Top}
-          className="!size-1.5 !border !border-surface-3 !bg-system"
-        />
-      )}
-
-      <div className="relative flex items-start gap-3">
-        <div className="rounded-md border border-white/[0.06] bg-surface-2 p-1.5">
-          <Icon className="size-3.5 text-primary" strokeWidth={1.5} />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium text-foreground">
-            {data.label}
-          </p>
-          {data.subtitle && (
-            <p className="truncate font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-              {data.subtitle}
-            </p>
-          )}
-          {data.detail && (
-            <p className="mt-1 line-clamp-3 text-xs leading-relaxed text-muted-foreground">
-              {data.detail}
-            </p>
-          )}
-        </div>
-      </div>
-
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        className="!size-1.5 !border !border-surface-3 !bg-primary"
-      />
-    </div>
-  );
+  buildPhase?: "discovery" | "building";
 }
 
 const nodeTypes = {
-  agentNode: GraphNode,
+  boardNode: BoardNode,
 };
+
+const PLACEHOLDER_NODES: Node<BoardNodeData>[] = [
+  {
+    id: "ph-agent",
+    type: "boardNode",
+    position: { x: 80, y: 220 },
+    data: {
+      label: "Agent",
+      subtitle: "Persona & role",
+      kind: "agent",
+      placeholder: true,
+    },
+    draggable: false,
+    selectable: false,
+  },
+  {
+    id: "ph-instructions",
+    type: "boardNode",
+    position: { x: 420, y: 220 },
+    data: {
+      label: "Instructions",
+      subtitle: "System prompt",
+      kind: "instructions",
+      placeholder: true,
+    },
+    draggable: false,
+    selectable: false,
+  },
+  {
+    id: "ph-tool",
+    type: "boardNode",
+    position: { x: 420, y: 420 },
+    data: {
+      label: "Tools",
+      subtitle: "Web search, APIs…",
+      kind: "tool",
+      placeholder: true,
+    },
+    draggable: false,
+    selectable: false,
+  },
+];
+
+const PLACEHOLDER_EDGES: Edge[] = [
+  {
+    id: "ph-e1",
+    source: "ph-agent",
+    target: "ph-instructions",
+    style: { stroke: "rgba(255,255,255,0.08)", strokeWidth: 1.5 },
+    markerEnd: { type: MarkerType.ArrowClosed, color: "rgba(255,255,255,0.12)" },
+  },
+  {
+    id: "ph-e2",
+    source: "ph-agent",
+    sourceHandle: "bottom",
+    target: "ph-tool",
+    style: { stroke: "rgba(255,255,255,0.08)", strokeWidth: 1.5, strokeDasharray: "6 4" },
+    markerEnd: { type: MarkerType.ArrowClosed, color: "rgba(255,255,255,0.12)" },
+  },
+];
 
 function buildGraphFromSpec(
   spec: AgentSpec,
   seenNodeIds: Set<string>
-): { nodes: Node<CustomNodeData>[]; edges: Edge[]; newCount: number } {
-  const nodes: Node<CustomNodeData>[] = [];
+): { nodes: Node<BoardNodeData>[]; edges: Edge[]; newCount: number } {
+  const nodes: Node<BoardNodeData>[] = [];
   const edges: Edge[] = [];
   const hasSwarm = spec.agents && spec.agents.length > 0;
   let newCount = 0;
@@ -118,15 +106,16 @@ function buildGraphFromSpec(
   const personaId = "persona";
   const personaIsNew = !seenNodeIds.has(personaId);
   if (personaIsNew) newCount++;
+
   nodes.push({
     id: personaId,
-    type: "agentNode",
-    position: { x: 300, y: 30 },
+    type: "boardNode",
+    position: { x: 80, y: 220 },
     data: {
       label: spec.name || "Untitled Agent",
       subtitle: spec.persona.role || "Define role",
       detail: spec.persona.tone ? `Tone: ${spec.persona.tone}` : undefined,
-      icon: hasSwarm ? "orchestrator" : "persona",
+      kind: hasSwarm ? "orchestrator" : "agent",
       isNew: personaIsNew,
       animDelay: personaIsNew ? 0 : undefined,
     },
@@ -138,14 +127,15 @@ function buildGraphFromSpec(
     if (isNew) newCount++;
     nodes.push({
       id: instructionsId,
-      type: "agentNode",
-      position: { x: 300, y: 200 },
+      type: "boardNode",
+      position: { x: 420, y: 220 },
       data: {
         label: "Instructions",
+        subtitle: "System prompt",
         detail: spec.instructions,
-        icon: "instructions",
+        kind: "instructions",
         isNew,
-        animDelay: isNew ? 120 : undefined,
+        animDelay: isNew ? 100 : undefined,
       },
     });
     edges.push({
@@ -154,8 +144,8 @@ function buildGraphFromSpec(
       target: instructionsId,
       animated: !isNew,
       className: isNew ? "edge-draw" : undefined,
-      markerEnd: { type: MarkerType.ArrowClosed, color: "#ff6b1a" },
-      style: { stroke: "rgba(255,107,26,0.5)", strokeWidth: 1.5 },
+      markerEnd: { type: MarkerType.ArrowClosed, color: "#3b82f6" },
+      style: { stroke: "#3b82f6", strokeWidth: 2, opacity: 0.65 },
     });
   }
 
@@ -165,26 +155,28 @@ function buildGraphFromSpec(
     if (isNew) newCount++;
     nodes.push({
       id: toolId,
-      type: "agentNode",
-      position: { x: 60 + index * 220, y: 400 },
+      type: "boardNode",
+      position: { x: 80 + index * 280, y: 420 },
       data: {
         label: tool.name,
         subtitle: tool.type.replace("_", " "),
-        icon: "tool",
+        kind: "tool",
         isNew,
-        animDelay: isNew ? 120 + index * 120 : undefined,
+        animDelay: isNew ? 100 + index * 80 : undefined,
       },
     });
     edges.push({
       id: `e-persona-${toolId}`,
       source: personaId,
+      sourceHandle: "bottom",
       target: toolId,
       animated: !isNew,
       className: isNew ? "edge-draw" : undefined,
-      markerEnd: { type: MarkerType.ArrowClosed, color: "#ff6b1a" },
+      markerEnd: { type: MarkerType.ArrowClosed, color: "#10b981" },
       style: {
-        stroke: "rgba(255,107,26,0.4)",
-        strokeWidth: 1.5,
+        stroke: "#10b981",
+        strokeWidth: 2,
+        opacity: 0.55,
         strokeDasharray: isNew ? 100 : undefined,
       },
     });
@@ -197,33 +189,37 @@ function buildGraphFromSpec(
       if (isNew) newCount++;
       nodes.push({
         id: agentId,
-        type: "agentNode",
-        position: { x: 60 + index * 240, y: 580 },
+        type: "boardNode",
+        position: { x: 80 + index * 300, y: 620 },
         data: {
           label: agent.role,
+          subtitle: "Sub-agent",
           detail: agent.instructions,
-          icon: "swarm",
+          kind: "swarm",
           isNew,
-          animDelay: isNew ? 120 + index * 120 : undefined,
+          animDelay: isNew ? 100 + index * 80 : undefined,
         },
       });
 
       const edgeTargets =
         agent.dependsOn.length === 0
-          ? [{ id: `e-persona-${agentId}`, source: personaId }]
+          ? [{ id: `e-persona-${agentId}`, source: personaId, sourceHandle: "bottom" as const }]
           : agent.dependsOn.map((depId) => ({
               id: `e-${depId}-${agentId}`,
               source: `swarm-${depId}`,
+              sourceHandle: undefined,
             }));
 
-      edgeTargets.forEach(({ id, source }) => {
+      edgeTargets.forEach(({ id, source, sourceHandle }) => {
         edges.push({
           id,
           source,
+          sourceHandle,
           target: agentId,
           animated: !isNew,
           className: isNew ? "edge-draw" : undefined,
-          markerEnd: { type: MarkerType.ArrowClosed, color: "#ff6b1a" },
+          markerEnd: { type: MarkerType.ArrowClosed, color: "#f59e0b" },
+          style: { stroke: "#f59e0b", strokeWidth: 2, opacity: 0.55 },
         });
       });
     });
@@ -232,30 +228,35 @@ function buildGraphFromSpec(
   return { nodes, edges, newCount };
 }
 
-export function AgentGraph({
+function BoardCanvas({
   spec,
-  isBuilding = false,
-  buildProgress = 0,
+  isBuilding,
+  buildProgress,
+  buildPhase,
 }: AgentGraphProps) {
   const seenNodeIdsRef = useRef<Set<string>>(new Set());
   const prevSpecKeyRef = useRef("");
   const [pulseKey, setPulseKey] = useState(0);
+  const { fitView } = useReactFlow();
 
   const validSpec = useMemo(() => {
     const parsed = agentSpecSchema.safeParse(spec);
     return parsed.success ? parsed.data : defaultAgentSpec;
   }, [spec]);
 
-  const stages = getBuildStages(validSpec);
+  const isEmpty = isAgentSpecEmpty(validSpec);
 
   const { nodes, edges, newCount } = useMemo(() => {
+    if (isEmpty) {
+      return { nodes: PLACEHOLDER_NODES, edges: PLACEHOLDER_EDGES, newCount: 0 };
+    }
     const graph = buildGraphFromSpec(validSpec, seenNodeIdsRef.current);
     graph.nodes.forEach((node) => seenNodeIdsRef.current.add(node.id));
     return graph;
-  }, [validSpec]);
+  }, [validSpec, isEmpty]);
 
   useEffect(() => {
-    if (isAgentSpecEmpty(validSpec)) {
+    if (isEmpty) {
       seenNodeIdsRef.current.clear();
       prevSpecKeyRef.current = "";
       return;
@@ -268,80 +269,104 @@ export function AgentGraph({
         setPulseKey((key) => key + 1);
       }
     }
-  }, [validSpec, newCount]);
+  }, [validSpec, newCount, isEmpty]);
 
-  const isEmpty =
-    !validSpec.persona.role &&
-    !validSpec.instructions &&
-    validSpec.tools.length === 0 &&
-    !validSpec.agents?.length;
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fitView({ padding: 0.2, duration: 300 });
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [nodes.length, fitView, pulseKey]);
+
+  const handleFitView = useCallback(() => {
+    fitView({ padding: 0.2, duration: 300 });
+  }, [fitView]);
+
+  const activeNodeCount = isEmpty ? 0 : nodes.length;
 
   return (
-    <HudPanel tier={2} live className="relative h-full min-h-[420px]">
-      {isBuilding && (
-        <>
-          <div className="pointer-events-none absolute inset-0 z-20 bg-system/[0.02]" />
-          <div className="build-scan-line pointer-events-none absolute inset-x-0 z-20 h-20 bg-gradient-to-b from-transparent via-system/[0.06] to-transparent" />
-        </>
+    <div className="relative h-full w-full">
+      <BoardToolbar
+        agentName={isEmpty ? undefined : validSpec.name}
+        nodeCount={activeNodeCount}
+        isBuilding={isBuilding && !isEmpty}
+        onFitView={handleFitView}
+      />
+
+      {isEmpty && (
+        <div className="pointer-events-none absolute inset-x-0 top-14 z-10 flex justify-center px-6">
+          <div className="max-w-md rounded-xl border border-white/[0.06] bg-surface-1/90 px-4 py-3 text-center backdrop-blur-sm">
+            <p className="text-sm font-medium text-foreground">
+              {buildPhase === "discovery"
+                ? "Your workflow will appear here"
+                : "Canvas ready for assembly"}
+            </p>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              {buildPhase === "discovery"
+                ? "Answer a few questions in chat, then start building to see nodes connect on this board."
+                : "Describe your agent in chat — nodes will appear and connect as the spec is built."}
+            </p>
+            {buildProgress !== undefined && buildProgress > 0 && (
+              <p className="mt-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground/70">
+                {buildProgress}% configured
+              </p>
+            )}
+          </div>
+        </div>
       )}
 
-      <div className="absolute left-4 top-4 z-10 flex items-center gap-2">
-        <span className="flex items-center gap-1.5 rounded border border-white/[0.06] bg-surface-1/90 px-2 py-1 font-mono text-[9px] uppercase tracking-[0.15em] text-system backdrop-blur-sm">
-          <Radio className="size-3 idle-pulse" strokeWidth={1.5} />
-          Live
-        </span>
-        {!isEmpty && (
-          <span className="font-mono text-[10px] text-muted-foreground">
-            {validSpec.name}
-          </span>
-        )}
+      {isBuilding && !isEmpty && (
+        <div className="build-scan-line pointer-events-none absolute inset-x-0 top-14 z-10 h-16 bg-gradient-to-b from-transparent via-primary/[0.04] to-transparent" />
+      )}
+
+      <div key={pulseKey} className="board-canvas h-full w-full pt-12">
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          nodeTypes={nodeTypes}
+          fitView
+          fitViewOptions={{ padding: 0.25, duration: 400 }}
+          nodesDraggable={!isEmpty}
+          nodesConnectable={false}
+          elementsSelectable={!isEmpty}
+          panOnDrag
+          panOnScroll
+          zoomOnScroll
+          snapToGrid
+          snapGrid={[20, 20]}
+          minZoom={0.4}
+          maxZoom={1.5}
+          proOptions={{ hideAttribution: true }}
+        >
+          <Background
+            variant={BackgroundVariant.Dots}
+            gap={20}
+            size={1.2}
+            color="rgba(255,255,255,0.08)"
+          />
+          <Controls
+            showInteractive={false}
+            position="bottom-left"
+            className="board-controls"
+          />
+        </ReactFlow>
       </div>
 
-      {isEmpty ? (
-        <div className="flex h-full flex-col items-center justify-center p-8">
-          <IdleReticle />
-          <h3 className="mt-6 text-sm font-medium text-foreground">
-            Awaiting agent configuration
-          </h3>
-          <p className="mt-1 max-w-xs text-center text-xs leading-relaxed text-muted-foreground">
-            System online. Describe your agent in the panel to begin assembly.
-          </p>
-          <BuildStepper stages={stages} />
-          <p className="mt-4 font-mono text-[9px] uppercase tracking-[0.2em] text-system/60">
-            {buildProgress > 0 ? `${buildProgress}% complete` : "Standby"}
-          </p>
-        </div>
-      ) : (
-        <div key={pulseKey} className="h-full w-full">
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            nodeTypes={nodeTypes}
-            fitView
-            fitViewOptions={{ padding: 0.35, duration: 400 }}
-            nodesDraggable={false}
-            nodesConnectable={false}
-            elementsSelectable={false}
-            panOnScroll
-            zoomOnScroll
-            proOptions={{ hideAttribution: true }}
-          >
-            <Background
-              variant={BackgroundVariant.Dots}
-              gap={22}
-              size={1}
-              color="rgba(34,211,238,0.12)"
-            />
-            <Controls showInteractive={false} position="bottom-right" />
-          </ReactFlow>
-        </div>
-      )}
-
       {newCount > 0 && !isEmpty && (
-        <div className="pointer-events-none absolute bottom-4 left-1/2 z-10 -translate-x-1/2 rounded border border-primary/25 bg-surface-1/95 px-3 py-1 font-mono text-[10px] uppercase tracking-wider text-primary backdrop-blur-sm">
-          +{newCount} module{newCount > 1 ? "s" : ""} deployed
+        <div className="pointer-events-none absolute bottom-4 left-1/2 z-10 -translate-x-1/2 rounded-full border border-white/10 bg-surface-1/95 px-3.5 py-1.5 text-xs font-medium text-foreground shadow-hud-sm backdrop-blur-sm">
+          +{newCount} node{newCount > 1 ? "s" : ""} added
         </div>
       )}
+    </div>
+  );
+}
+
+export function AgentGraph(props: AgentGraphProps) {
+  return (
+    <HudPanel tier={2} className="relative h-full min-h-[420px] overflow-hidden">
+      <ReactFlowProvider>
+        <BoardCanvas {...props} />
+      </ReactFlowProvider>
     </HudPanel>
   );
 }

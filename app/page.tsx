@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { ActionsPanel } from "@/components/actions-panel";
-import { AgentGraph } from "@/components/agent-graph";
+import { CenterPanel, type CenterView } from "@/components/center-panel";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ChatPanel } from "@/components/chat-panel";
 import { SegmentedProgress } from "@/components/hud/segmented-progress";
@@ -12,11 +12,14 @@ import {
   getBuildStatusLabel,
 } from "@/lib/build-progress";
 import { defaultAgentSpec, isAgentSpecEmpty, type AgentSpec } from "@/lib/agent-spec";
+import type { BuildPhase } from "@/lib/build-phase";
 
 export default function Home() {
   const [agentSpec, setAgentSpec] = useState<AgentSpec>(defaultAgentSpec);
+  const [buildPhase, setBuildPhase] = useState<BuildPhase>("discovery");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isBuilding, setIsBuilding] = useState(false);
+  const [centerView, setCenterView] = useState<CenterView>("canvas");
 
   const handleSpecUpdate = useCallback((spec: AgentSpec) => {
     setAgentSpec(spec);
@@ -27,7 +30,12 @@ export default function Home() {
     [agentSpec]
   );
   const hasAgent = !isAgentSpecEmpty(agentSpec);
-  const statusLabel = getBuildStatusLabel(buildProgress, isBuilding, hasAgent);
+  const statusLabel = getBuildStatusLabel(
+    buildProgress,
+    isBuilding,
+    hasAgent,
+    buildPhase
+  );
 
   return (
     <ErrorBoundary>
@@ -61,17 +69,22 @@ export default function Home() {
             </div>
           </header>
 
-          <main className="grid min-h-0 flex-1 grid-cols-1 gap-2 p-2 lg:grid-cols-[minmax(300px,340px)_1fr_minmax(260px,280px)]">
+          <main className="grid min-h-0 flex-1 grid-cols-1 gap-2 p-2 lg:grid-cols-[minmax(320px,380px)_1fr_minmax(260px,280px)]">
             <ChatPanel
               agentSpec={agentSpec}
+              buildPhase={buildPhase}
+              onBuildPhaseChange={setBuildPhase}
               onSpecUpdate={handleSpecUpdate}
               onError={setErrorMessage}
               onBuildingChange={setIsBuilding}
             />
-            <AgentGraph
-              spec={agentSpec}
+            <CenterPanel
+              view={centerView}
+              onViewChange={setCenterView}
+              agentSpec={agentSpec}
               isBuilding={isBuilding}
               buildProgress={buildProgress}
+              buildPhase={buildPhase}
             />
             <ActionsPanel
               agentSpec={agentSpec}
@@ -80,6 +93,7 @@ export default function Home() {
               buildProgress={buildProgress}
               statusLabel={statusLabel}
               isBuilding={isBuilding}
+              onPreview={() => setCenterView("preview")}
             />
           </main>
         </div>

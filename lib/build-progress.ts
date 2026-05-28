@@ -1,4 +1,5 @@
 import { defaultAgentSpec, type AgentSpec } from "./agent-spec";
+import type { BuildPhase } from "./build-phase";
 
 export type BuildStage = "persona" | "tools" | "instructions";
 
@@ -30,8 +31,10 @@ export function getBuildStages(spec: AgentSpec): Record<BuildStage, boolean> {
 export function getBuildStatusLabel(
   progress: number,
   isBuilding: boolean,
-  hasAgent: boolean
+  hasAgent: boolean,
+  buildPhase: BuildPhase = "building"
 ): string {
+  if (buildPhase === "discovery" && !hasAgent) return "DISCOVERY";
   if (isBuilding) return "ASSEMBLING AGENT";
   if (progress >= 100 || (hasAgent && progress >= 80)) return "AGENT READY";
   if (progress >= 60) return "CONFIGURING TOOLS";
