@@ -1,0 +1,30 @@
+{
+  "cli_version": "0.6.3",
+  "checkpoint_id": "27c6e184edb4",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 6,
+  "files_touched": [
+    "app/agents/page.tsx",
+    "app/api/codegen/route.ts",
+    "components/app-sidebar.tsx",
+    "components/board/board-node.tsx",
+    "components/codegen-actions-panel.tsx",
+    "components/codegen-chat-panel.tsx",
+    "components/codegen-graph.tsx",
+    "docs/plans/agent-code-generator.md",
+    "lib/chat-types.ts",
+    "lib/codegen-prompt.ts",
+    "lib/codegen-types.ts",
+    "package-lock.json",
+    "package.json"
+  ],
+  "sessions": [
+    {
+      "metadata": "/27/c6e184edb4/0/metadata.json",
+      "transcript": "/27/c6e184edb4/0/full.jsonl",
+      "content_hash": "/27/c6e184edb4/0/content_hash.txt",
+      "prompt": "/27/c6e184edb4/0/prompt.txt"
+    }
+  ]
+}
