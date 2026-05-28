@@ -3,7 +3,7 @@
   "checkpoint_id": "2d8628ba90af",
   "strategy": "manual-commit",
   "branch": "main",
-  "checkpoints_count": 13,
+  "checkpoints_count": 14,
   "files_touched": [
     "app/api/chat/route.ts",
     "app/page.tsx",
@@ -49,6 +49,12 @@
       "transcript": "/2d/8628ba90af/3/full.jsonl",
       "content_hash": "/2d/8628ba90af/3/content_hash.txt",
       "prompt": "/2d/8628ba90af/3/prompt.txt"
+    },
+    {
+      "metadata": "/2d/8628ba90af/4/metadata.json",
+      "transcript": "/2d/8628ba90af/4/full.jsonl",
+      "content_hash": "/2d/8628ba90af/4/content_hash.txt",
+      "prompt": "/2d/8628ba90af/4/prompt.txt"
     }
   ]
 }

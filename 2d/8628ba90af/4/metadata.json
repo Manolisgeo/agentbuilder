@@ -1,0 +1,88 @@
+{
+  "cli_version": "0.6.3",
+  "checkpoint_id": "2d8628ba90af",
+  "session_id": "78e06600-413f-4990-96cc-3f8d8780c6b5",
+  "strategy": "manual-commit",
+  "created_at": "2026-05-28T12:48:54.23533Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "app/api/chat/route.ts",
+    "app/page.tsx",
+    "components/actions-panel.tsx",
+    "components/chat-panel.tsx",
+    "components/chat/chat-message.tsx",
+    "components/chat/tool-call-display.tsx",
+    "components/hud/segmented-progress.tsx",
+    "components/preview/preview-panel.tsx",
+    "lib/agent-prompt.ts",
+    "lib/build-progress.ts",
+    "lib/orchestrator-prompt.ts",
+    "lib/preview-runtime.ts",
+    "lib/preview-types.ts",
+    "package-lock.json",
+    "package.json"
+  ],
+  "agent": "Cursor",
+  "model": "claude-sonnet-4-6",
+  "turn_id": "b7a5a0bc14b8",
+  "session_metrics": {
+    "turn_count": 1
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-05-28T12:48:54.233629Z",
+    "agent_lines": 0,
+    "agent_removed": 30,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 180,
+    "total_committed": 19,
+    "total_lines_changed": 210,
+    "agent_percentage": 14.285714285714285,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 2699,
+      "user_lines_removed": 180,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        "app/api/chat/route.ts": 5,
+        "app/page.tsx": 4,
+        "components/actions-panel.tsx": 63,
+        "components/chat-panel.tsx": 9,
+        "components/chat/chat-message.tsx": 147,
+        "components/chat/tool-call-display.tsx": 147,
+        "components/hud/segmented-progress.tsx": 2,
+        "components/preview/articles-feed.tsx": 287,
+        "components/preview/dashboard-card.tsx": 60,
+        "components/preview/preview-panel.tsx": 38,
+        "docs/plans/html-dashboard-preview.md": 282,
+        "docs/plans/professional-ui-polish.md": 193,
+        "lib/agent-prompt.ts": 38,
+        "lib/build-progress.ts": 8,
+        "lib/orchestrator-prompt.ts": 1,
+        "lib/preview-runtime.ts": 103,
+        "lib/preview-types.ts": 25,
+        "package-lock.json": 1285,
+        "package.json": 2
+      },
+      "user_removed_per_file": {
+        "app/api/chat/route.ts": 4,
+        "app/page.tsx": 12,
+        "components/actions-panel.tsx": 86,
+        "components/chat-panel.tsx": 14,
+        "components/chat/chat-message.tsx": 39,
+        "components/chat/tool-call-display.tsx": 1,
+        "components/hud/segmented-progress.tsx": 2,
+        "components/preview/preview-panel.tsx": 3,
+        "lib/agent-prompt.ts": 1,
+        "lib/build-progress.ts": 8,
+        "lib/preview-runtime.ts": 9,
+        "package-lock.json": 1
+      }
+    }
+  ]
+}
