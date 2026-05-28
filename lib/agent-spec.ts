@@ -8,6 +8,10 @@ export const TOOL_TYPES = [
   "slack_send",
   "http_request",
   "custom",
+  // local-Docker deploy connectors
+  "file_search",
+  "http_api",
+  "db_query",
 ] as const;
 
 export type ToolType = (typeof TOOL_TYPES)[number];
@@ -17,6 +21,11 @@ export const toolSchema = z.object({
   name: z.string(),
   // accepts known types and any future custom strings
   type: z.union([z.enum(TOOL_TYPES), z.string()]),
+  // optional connector config consumed by the local-Docker deploy
+  path: z.string().optional(),
+  glob: z.string().optional(),
+  baseUrl: z.string().optional(),
+  engine: z.enum(["postgres", "mysql", "sqlite"]).optional(),
 });
 
 export const swarmMemoryKeySchema = z.object({

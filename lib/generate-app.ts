@@ -1,0 +1,98 @@
+import { promises as fs } from "node:fs";
+import path from "node:path";
+import type { AgentSpec } from "./agent-spec";
+import { agentSlug, type ConnectorSlot } from "./connectors";
+
+export { agentSlug, planConnectors, type ConnectorSlot } from "./connectors";
+
+const TEMPLATE_DIR = path.join(process.cwd(), "lib", "runtime-template");
+
+const TOOL_DESCRIPTIONS: Record<string, string> = {
+  file_search: "search the user's connected files",
+  http_api: "call a connected HTTP API",
+  db_query: "run read-only SQL against a connected database",
+  web_search: "search the web",
+};
+
+function buildSystemPrompt(spec: AgentSpec, plan: ConnectorSlot[]): string {
+  const lines: string[] = [`You are ${spec.name}.`];
+  if (spec.persona.role) lines.push(`Your role: ${spec.persona.role}.`);
+  if (spec.persona.tone) lines.push(`Your tone: ${spec.persona.tone}.`);
+  if (spec.instructions) lines.push("", "Instructions:", spec.instructions);
+  if (plan.length > 0) {
+    lines.push(
+      "",
+      "You have the following tools available — use them whenever they can help answer the user:"
+    );
+    for (const c of plan) {
+      lines.push(`- ${c.name}: ${TOOL_DESCRIPTIONS[c.type] ?? "a connected tool"}`);
+    }
+  }
+  return lines.join("\n");
+}
+
+async function parentDepVersion(name: string, fallback: string): Promise<string> {
+  try {
+    const pkg = JSON.parse(
+      await fs.readFile(path.join(process.cwd(), "package.json"), "utf8")
+    );
+    return pkg.dependencies?.[name] ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+async function buildPackageJson(spec: AgentSpec, plan: ConnectorSlot[]) {
+  const dependencies: Record<string, string> = {
+    ai: await parentDepVersion("ai", "^6.0.191"),
+    "@ai-sdk/openai": await parentDepVersion("@ai-sdk/openai", "^3.0.66"),
+  };
+  const engines = new Set(
+    plan.filter((c) => c.type === "db_query").map((c) => c.engine)
+  );
+  if (engines.has("postgres")) dependencies.pg = "^8.13.0";
+  if (engines.has("mysql")) dependencies.mysql2 = "^3.11.0";
+  if (engines.has("sqlite")) dependencies["better-sqlite3"] = "^11.3.0";
+
+  return {
+    name: `${agentSlug(spec.name)}-agent`,
+    version: "1.0.0",
+    private: true,
+    type: "module",
+    scripts: { start: "node server.mjs" },
+    dependencies,
+  };
+}
+
+export async function generateAgentFiles(
+  spec: AgentSpec,
+  plan: ConnectorSlot[]
+): Promise<Record<string, string>> {
+  const [serverMjs, indexHtml, dockerfile, dockerignore] = await Promise.all([
+    fs.readFile(path.join(TEMPLATE_DIR, "server.mjs"), "utf8"),
+    fs.readFile(path.join(TEMPLATE_DIR, "index.html"), "utf8"),
+    fs.readFile(path.join(TEMPLATE_DIR, "Dockerfile"), "utf8"),
+    fs.readFile(path.join(TEMPLATE_DIR, "dockerignore"), "utf8"),
+  ]);
+
+  const config = {
+    name: spec.name,
+    systemPrompt: buildSystemPrompt(spec, plan),
+    tools: plan.map((c) => ({
+      slot: c.slot,
+      name: c.name,
+      type: c.type,
+      ...(c.engine ? { engine: c.engine } : {}),
+    })),
+  };
+
+  return {
+    "server.mjs": serverMjs,
+    "public/index.html": indexHtml,
+    Dockerfile: dockerfile,
+    ".dockerignore": dockerignore,
+    "agent.config.json": JSON.stringify(config, null, 2),
+    "agent.json": JSON.stringify(spec, null, 2),
+    "package.json": JSON.stringify(await buildPackageJson(spec, plan), null, 2),
+  };
+}

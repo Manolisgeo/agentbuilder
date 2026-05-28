@@ -1,8 +1,18 @@
 "use client";
 
-import { Download, FileJson, FileText, Loader2, Play, Save } from "lucide-react";
-import { useState } from "react";
+import {
+  Download,
+  ExternalLink,
+  FileJson,
+  FileText,
+  Loader2,
+  Play,
+  Rocket,
+  Save,
+} from "lucide-react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { HudError } from "@/components/hud/hud-error";
 import { HudPanel } from "@/components/hud/hud-panel";
 import { SegmentedProgress } from "@/components/hud/segmented-progress";
@@ -10,6 +20,14 @@ import { MemoryPanel } from "@/components/memory-panel";
 import { downloadAgentBundle } from "@/lib/export";
 import { isAgentPreviewReady } from "@/lib/agent-prompt";
 import { isAgentSpecEmpty, type AgentSpec } from "@/lib/agent-spec";
+import {
+  NEED_LABELS,
+  needIsSecret,
+  planConnectors,
+  type ConnectorSlot,
+  type RuntimeNeed,
+  type SlotInput,
+} from "@/lib/connectors";
 import { cn } from "@/lib/utils";
 import type { SwarmMemoryState } from "@/lib/swarm-memory";
 
@@ -89,6 +107,31 @@ export function ActionsPanel({
     }
   }
 
+  const plan = useMemo(() => planConnectors(agentSpec), [agentSpec]);
+  const hasWebSearch = plan.some((c) => c.type === "web_search");
+  const [isDeploying, setIsDeploying] = useState(false);
+  const [deployLogs, setDeployLogs] = useState<string[]>([]);
+  const [deployedUrl, setDeployedUrl] = useState<string | null>(null);
+  const [deployError, setDeployError] = useState<string | null>(null);
+  const [slotInputs, setSlotInputs] = useState<Record<string, SlotInput>>({});
+  const [searchKey, setSearchKey] = useState("");
+
+  function slotValue(c: ConnectorSlot, need: RuntimeNeed): string {
+    const entered = slotInputs[c.slot]?.[need];
+    if (entered !== undefined) return entered;
+    if (need === "path") return c.path ?? "";
+    if (need === "glob") return c.glob ?? "";
+    if (need === "baseUrl") return c.baseUrl ?? "";
+    return "";
+  }
+
+  function setSlotField(slot: string, need: RuntimeNeed, value: string) {
+    setSlotInputs((prev) => ({
+      ...prev,
+      [slot]: { ...prev[slot], [need]: value },
+    }));
+  }
+
   async function handleExport() {
     setIsExporting(true);
     setExportError(null);
@@ -101,6 +144,66 @@ export function ActionsPanel({
       );
     } finally {
       setIsExporting(false);
+    }
+  }
+
+  async function handleDeploy() {
+    setIsDeploying(true);
+    setDeployLogs([]);
+    setDeployedUrl(null);
+    setDeployError(null);
+    onClearError();
+    try {
+      const resp = await fetch("/api/deploy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          spec: agentSpec,
+          runtime: {
+            slots: slotInputs,
+            searchApiKey: searchKey.trim() || undefined,
+          },
+        }),
+      });
+      if (!resp.ok || !resp.body) {
+        const msg = await resp.json().catch(() => ({}));
+        throw new Error(msg.error || `Deploy failed (${resp.status}).`);
+      }
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          let evt: {
+            type: string;
+            line?: string;
+            url?: string;
+            message?: string;
+          };
+          try {
+            evt = JSON.parse(line);
+          } catch {
+            continue;
+          }
+          if (evt.type === "log" && evt.line) {
+            setDeployLogs((prev) => [...prev, evt.line as string]);
+          } else if (evt.type === "done" && evt.url) {
+            setDeployedUrl(evt.url);
+          } else if (evt.type === "error") {
+            setDeployError(evt.message ?? "Deploy failed.");
+          }
+        }
+      }
+    } catch (e) {
+      setDeployError(e instanceof Error ? e.message : "Deploy failed.");
+    } finally {
+      setIsDeploying(false);
     }
   }
 
@@ -265,6 +368,102 @@ export function ActionsPanel({
           {!canExport && (
             <p className="mt-2 text-center font-mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground/70">
               Awaiting spec data
+            </p>
+          )}
+        </div>
+
+        {/* Deploy */}
+        <div className="rounded-xl border border-white/[0.06] bg-gradient-to-b from-white/[0.03] to-transparent p-3.5">
+          <SectionHeader>Deploy · local Docker</SectionHeader>
+          <p className="mb-3 text-[11.5px] leading-relaxed text-muted-foreground">
+            Generate a runnable agent and launch it in a container.
+          </p>
+
+          {(plan.some((c) => c.needs.length > 0) || hasWebSearch) && (
+            <div className="mb-3 space-y-3">
+              {plan
+                .filter((c) => c.needs.length > 0)
+                .map((c) => (
+                  <div key={c.slot} className="space-y-1.5">
+                    <p className="font-mono text-[9px] uppercase tracking-[0.16em] text-system">
+                      {c.name}
+                    </p>
+                    {c.needs.map((need) => (
+                      <Input
+                        key={need}
+                        type={needIsSecret(need) ? "password" : "text"}
+                        placeholder={NEED_LABELS[need]}
+                        value={slotValue(c, need)}
+                        onChange={(e) => setSlotField(c.slot, need, e.target.value)}
+                        disabled={isDeploying}
+                        className="h-8 border-white/[0.08] bg-white/[0.02] text-[12px]"
+                      />
+                    ))}
+                  </div>
+                ))}
+              {hasWebSearch && (
+                <Input
+                  type="password"
+                  placeholder="Web search API key (optional)"
+                  value={searchKey}
+                  onChange={(e) => setSearchKey(e.target.value)}
+                  disabled={isDeploying}
+                  className="h-8 border-white/[0.08] bg-white/[0.02] text-[12px]"
+                />
+              )}
+            </div>
+          )}
+
+          <Button
+            className={cn(
+              "lift h-9 w-full gap-2 transition-all",
+              canExport && !isDeploying
+                ? "bg-gradient-to-br from-primary to-orange-600 text-primary-foreground shadow-[0_4px_16px_-4px_rgba(255,107,26,0.6),inset_0_1px_0_rgba(255,255,255,0.2)] hover:shadow-[0_6px_22px_-4px_rgba(255,107,26,0.8),inset_0_1px_0_rgba(255,255,255,0.25)]"
+                : "bg-white/[0.04] text-muted-foreground"
+            )}
+            onClick={handleDeploy}
+            disabled={!canExport || isDeploying}
+          >
+            {isDeploying ? (
+              <>
+                <Loader2 className="size-3.5 animate-spin" />
+                Deploying
+              </>
+            ) : (
+              <>
+                <Rocket className="size-3.5" />
+                Deploy locally
+              </>
+            )}
+          </Button>
+
+          {deployedUrl && (
+            <a
+              href={deployedUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-2 flex items-center justify-center gap-2 rounded-md border border-system/30 bg-system/[0.06] px-3 py-2 text-[12px] text-system transition-colors hover:bg-system/[0.12]"
+            >
+              <ExternalLink className="size-3.5" />
+              {deployedUrl}
+            </a>
+          )}
+
+          {deployError && (
+            <div className="mt-2">
+              <HudError message={deployError} />
+            </div>
+          )}
+
+          {deployLogs.length > 0 && (
+            <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-md border border-white/[0.06] bg-black/30 p-2 font-mono text-[10px] leading-relaxed text-muted-foreground">
+              {deployLogs.join("\n")}
+            </pre>
+          )}
+
+          {!canExport && (
+            <p className="mt-2 text-center font-mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground/70">
+              Build an agent first
             </p>
           )}
         </div>
